@@ -1,0 +1,22 @@
+{
+  "standard_charge_information": [
+    {
+      "description": "Head CT (no contrast)",
+      "code_information": [{"code": "70450", "type": "CPT"}],
+      "provider_references": [{"npi": "1234567890"}],
+      "standard_charges": [
+        {"type": "gross", "standard_charge_dollar": 1200},
+        {"type": "discounted_cash", "standard_charge_dollar": 450},
+        {
+          "type": "negotiated",
+          "standard_charge_dollar": 1100,
+          "payer_name": "Example Health",
+          "plan_name": "Gold PPO",
+          "allowed_amount_median": 1000,
+          "allowed_amount_10th": 700,
+          "allowed_amount_90th": 1400
+        }
+      ]
+    }
+  ]
+}

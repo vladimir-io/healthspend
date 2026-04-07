@@ -1,0 +1,8 @@
+
+name = "healthspend"
+pages_build_output_dir = "web/dist"
+compatibility_date = "2024-04-01"
+
+[vars]
+PLATFORM = "HEALTHSPEND_TERMINAL"
+VERSION = "1.0.0"

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>High-Value Audit: The 550% Brain MRI Price Variation</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Analysis of the Healthspend 2026 ledger reveals a 5.5x spread in Brain MRI cash prices across US hospitals.">
+    <style>
+        body {
+            font-family: -apple-system, system-ui, sans-serif;
+            line-height: 1.7;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 24px;
+            color: #1a1a1a;
+            background: #fafafa;
+        }
+
+        .branding {
+            font-weight: 900;
+            color: #FF6000;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            line-height: 1.1;
+            letter-spacing: -0.04em;
+            color: #000;
+            margin: 0 0 24px;
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            color: #333;
+        }
+
+        .data-card {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            padding: 24px;
+            margin: 32px 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .data-header {
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 12px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f9f9f9;
+        }
+
+        .data-label {
+            color: #555;
+        }
+
+        .data-value {
+            font-weight: 800;
+            color: #FF6000;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        }
+
+        .highlight-box {
+            border-left: 4px solid #FF6000;
+            padding: 20px;
+            background: #fff5f0;
+            margin: 32px 0;
+            font-style: italic;
+            font-weight: 500;
+        }
+
+        footer {
+            margin-top: 60px;
+            padding-top: 32px;
+            border-top: 2px solid #eee;
+            font-size: 0.95rem;
+            color: #666;
+        }
+
+        a {
+            color: #FF6000;
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <span class="branding">Institutional Research &middot; Audit 2026.4</span>
+    <h1>Arbitrage in Medical Imaging: A 5.5x Spread in CPT 70551</h1>
+
+    <p>Analysis of the Healthspend 2026 ledger reveals a significant structural inefficiency in hospital pricing.
+        Querying the federal machine-readable files (MRFs) for a standard, non-contrast Brain MRI (CPT 70551) exposes a
+        5.5x spread in cash prices for an identical clinical output.</p>
+
+    <div class="data-card">
+        <div class="data-header">Diagnostic Audit: Brain MRI (CPT 70551)</div>
+        <div class="data-row">
+            <span class="data-label">Lower Bound (Tahoe Forest Hospital)</span>
+            <span class="data-value">$400.00</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Upper Bound (Hosp. Metropolitano Dr Pila)</span>
+            <span class="data-value">$2,200.00</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Observed Market Spread</span>
+            <span class="data-value">550.0%</span>
+        </div>
+    </div>
+
+    <p>A 550 percent delta for the exact same procedure indicates a market fundamentally lacking basic price discovery.
+        While the CMS transparency mandate was engineered to collapse these margins, execution at the network edge
+        remains heavily fragmented.</p>
+
+    <div class="highlight-box">
+        We observe systemic evasion tactics across the dataset. Facilities are actively deploying adversarial rulesets,
+        such as targeted WAF configurations and bot-blocking directives, to prevent automated ingestion of their pricing
+        files in direct violation of the machine-readable mandate.
+    </div>
+
+    <p>Nodes like Tuscaloosa VA Medical Center and Hill Crest Behavioral Health Services currently return a zero on our
+        compliance index. By intentionally breaking programmatic access to their ledgers, these institutions degrade the
+        public dataset and prevent the market from converging on a fair equilibrium price for essential diagnostics.</p>
+
+    <footer>
+        Query the full clinical ledger and transparency compliance matrix at <a
+            href="https://healthspend.lol">Healthspend.lol</a>. Access the audit index to verify programmatic compliance
+        at your local facility.
+    </footer>
+</body>
+
+</html>
