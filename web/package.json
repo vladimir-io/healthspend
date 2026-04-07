@@ -1,0 +1,21 @@
+{
+  "name": "healthspend-terminal",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "search:check": "node scripts/search_regression_check.mjs"
+  },
+  "devDependencies": {
+    "sqlite3": "^6.0.1",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.14"
+  },
+  "dependencies": {
+    "@mlc-ai/web-llm": "^0.2.82",
+    "sql.js-httpvfs": "^0.8.12"
+  }
+}

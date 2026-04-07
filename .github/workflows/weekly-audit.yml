@@ -1,0 +1,183 @@
+name: Weekly Full Coverage Audit Pipeline
+
+on:
+  schedule:
+    # Run every Sunday at 1:00 AM UTC
+    - cron: '0 1 * * 0'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  audit_states:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      max-parallel: 3
+      fail-fast: false
+      matrix:
+        state: [TX, CA, NY, FL, IL, PA, OH, MI, GA, NC, AZ, CO, WA, MA, VA]
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v4
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build scraper
+        run: |
+          cd scraper
+          cargo build --release 2>&1 | head -100
+          cd ..
+
+      - name: Run discovery for ${{ matrix.state }}
+        continue-on-error: true
+        run: |
+          cd scraper
+          cargo run --release -- --discover-only --state ${{ matrix.state }}
+          cd ..
+
+      - name: Run audit for ${{ matrix.state }}
+        continue-on-error: true
+        run: |
+          cd scraper
+          cargo run --release -- --audit-only --state ${{ matrix.state }}
+          cd ..
+
+      - name: Run parser for ${{ matrix.state }} (FULL CPT COVERAGE)
+        continue-on-error: true
+        env:
+          HS_FULL_CPT_COVERAGE: '1'
+        run: |
+          cd scraper
+          cargo run --release -- --parse-only --state ${{ matrix.state }}
+          cd ..
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Validate output
+        continue-on-error: true
+        run: |
+          python3 scripts/validate_database.py scraper/prices.db || true
+          python3 scripts/validate_database.py scraper/compliance.db || true
+
+      - name: Upload intermediate artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-audit-logs-${{ matrix.state }}
+          path: scraper/target/debug/logs
+          retention-days: 14
+
+  aggregate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: audit_states
+    if: always()
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run full aggregation pass (FULL CPT COVERAGE)
+        env:
+          HS_FULL_CPT_COVERAGE: '1'
+        run: |
+          cd scraper
+          cargo run --release -- 2>&1 | tail -20
+          cd ..
+
+      - name: Run compliance ingestion (UPSERT)
+        run: python3 ingest.py
+
+      - name: Validate final database
+        run: python3 scripts/validate_database.py web/public/audit_data.db
+
+      - name: Compute metrics
+        continue-on-error: true
+        run: python3 scripts/compute_metrics.py 2>&1 || echo "Metrics computation failed"
+
+      - name: Generate weekly data manifest
+        run: |
+          python3 - << 'PY'
+          import json
+          from datetime import datetime, timezone
+
+          manifest = {
+              "version": "1.0",
+              "generated_at": datetime.now(timezone.utc).isoformat(),
+              "build_id": "${{ github.run_id }}",
+              "pipeline": "github_actions_weekly_full",
+              "full_cpt_coverage": True,
+              "success": True,
+          }
+
+          with open("web/public/data_manifest.json", "w", encoding="utf-8") as f:
+              json.dump(manifest, f, ensure_ascii=False)
+          PY
+
+      - name: Upload final database
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-full-database
+          path: web/public/audit_data.db
+          retention-days: 30
+
+      - name: Notify success
+        if: success()
+        run: |
+          echo "✓ Weekly full coverage pipeline completed successfully"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Timestamp: $(date -Iseconds)"
+
+      - name: Notify failure
+        if: failure()
+        run: |
+          echo "✗ Weekly full coverage pipeline had errors"
+          echo "Run ID: ${{ github.run_id }}"
+          exit 1

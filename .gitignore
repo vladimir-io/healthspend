@@ -1,0 +1,104 @@
+# =============================================================================
+# Healthspend v1.0 - Open Source .gitignore
+# For Cloudflare Pages deployment with GitHub integration
+# =============================================================================
+
+# Build outputs (never commit built code)
+dist/
+web/dist/
+target/
+*.o
+*.a
+*.so
+.cargo/
+
+# Dependencies (use lock files instead)
+node_modules/
+.npm/
+__pycache__/
+*.egg-info/
+.venv/
+venv/
+
+# Data files (CSVs and databases regenerated via build pipeline)
+*.csv
+*.db
+*.db-*
+*.db-journal
+scraper/*.db*
+
+# EXCEPTION: Audit data is tracked for regulatory compliance
+!web/public/audit_data.db
+!web/public/favicon.ico
+
+# Temporary/local files
+*.log
+*.tmp
+*.temp
+*.pid
+.DS_Store
+Thumbs.db
+
+# Python cache
+*.pyc
+*.pyo
+*.pyd
+.mypy_cache/
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# Environment variables (CRITICAL: never commit credentials)
+.env
+.env.local
+.env.*.local
+
+# OS-specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# =============================================================================
+# DEPLOYMENT ARCHITECTURE: Cloudflare Pages + GitHub
+# =============================================================================
+#
+# HOW IT WORKS:
+# 1. You push code to GitHub (public, open-source)
+# 2. Cloudflare Pages hook detects push to main
+# 3. Cloudflare runs build: `cd web && npm run build`
+# 4. Build output goes to web/dist/
+# 5. Cloudflare deploys ONLY web/dist/ to edge
+# 6. End users see only the built website, not source files
+#
+# RESULT: GitHub repo is public & transparent (open source), but the deployed
+# website only exposes what's in web/dist/ (built output).
+#
+# =============================================================================
+
+# Clinical Data Nodes (INTENTIONALLY INCLUDED FOR DEPLOYMENT)
+# 
+# These 5,400+ HTML files represent healthcare facility visibility data
+# drawn from CMS public disclosure requirements and scientific research.
+# 
+# They are:
+# - Committed to GitHub (open-source transparency)
+# - Built into web/dist/ for Cloudflare deployment
+# - Public climate/regulatory data (not sensitive)
+# - Core to the project's healthcare transparency mission
+#
+# DO NOT EXCLUDE THESE—they are essential project data
+#
+!web/public/visibility/
+!web/public/api/v1/
+!web/public/sitemap.xml
+!web/public/media-brief-2026.html
+!web/public/transparency-2026.html
+!web/public/transparency-index.html
+!web/public/mri-variation-report.html
