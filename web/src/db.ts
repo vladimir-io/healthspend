@@ -8,6 +8,7 @@ const DEFAULT_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
 const cache: Map<string, SearchResponse> = new Map();
 const MAX_SEARCH_CACHE = 48;
 let pricesHasAttributionConfidence: boolean | null = null;
+let pricesFtsTableExists: boolean | null = null;
 
 type SearchSort = 'price-asc' | 'price-desc' | 'score-desc';
 
@@ -133,6 +134,38 @@ async function hasAttributionConfidenceColumn(): Promise<boolean> {
   return pricesHasAttributionConfidence;
 }
 
+async function hasPricesFtsTable(): Promise<boolean> {
+  if (pricesFtsTableExists !== null) {
+    return pricesFtsTableExists;
+  }
+  try {
+    const w = await getSharedWorker(DB_URL);
+    const r = (await w.db.query(
+      "SELECT 1 as ok FROM sqlite_master WHERE type='table' AND name='prices_fts' LIMIT 1"
+    )) as { ok: number }[];
+    pricesFtsTableExists = r.length > 0;
+  } catch {
+    pricesFtsTableExists = false;
+  }
+  return pricesFtsTableExists;
+}
+
+function toFtsMatchFromTokens(phrase: string): string {
+  const norm = phrase
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const parts = norm.split(' ').filter((t) => t.length > 0);
+  if (parts.length === 0) return '';
+  return parts
+    .map((t) => {
+      const esc = t.replace(/"/g, '""');
+      return `"${esc}"*`;
+    })
+    .join(' AND ');
+}
+
 function resolveMappedCode(rawQuery: string): string {
   const norm = normalizeQuery(rawQuery);
   if (!norm) return '';
@@ -206,19 +239,42 @@ function resolveOrderBy(sort: SearchSort): string {
   return 'p.cash_price ASC';
 }
 
-function buildQuery(query: string, state: string = '', zip: string = '', minConfidence: number = DEFAULT_CONFIDENCE_THRESHOLD, withAttributionConfidence: boolean = true, sort: SearchSort = 'price-asc', limit: number = DEFAULT_SEARCH_PAGE_SIZE, offset: number = 0) {
+function buildQuery(
+  query: string,
+  state: string = '',
+  zip: string = '',
+  minConfidence: number = DEFAULT_CONFIDENCE_THRESHOLD,
+  withAttributionConfidence: boolean = true,
+  sort: SearchSort = 'price-asc',
+  limit: number = DEFAULT_SEARCH_PAGE_SIZE,
+  offset: number = 0,
+  useFts: boolean = false
+): { sql: string; params: any[]; mapped: string; usedFts: boolean } {
   const norm = normalizeQuery(query);
-  let mappedCpt = resolveMappedCode(norm);
-  
+  const mappedCpt = resolveMappedCode(norm);
+  const isNumericCpt = mappedCpt.length > 0 && /^[A-Z]?\d{4,5}$/i.test(mappedCpt);
+  const ftsQ =
+    useFts && !isNumericCpt && mappedCpt.length > 0
+      ? toFtsMatchFromTokens(mappedCpt) || toFtsMatchFromTokens(norm)
+      : '';
+  const usedFts = Boolean(ftsQ);
+
+  const baseFrom = usedFts
+    ? `FROM prices p
+    INNER JOIN prices_fts fts ON fts.rowid = p.rowid
+    LEFT JOIN hospitals h ON h.ccn = p.ein
+    LEFT JOIN compliance c ON c.ccn = h.ccn`
+    : `FROM prices p
+    LEFT JOIN hospitals h ON h.ccn = p.ein
+    LEFT JOIN compliance c ON c.ccn = h.ccn`;
+
   let sql = `
-    SELECT 
+    SELECT
       p.*, h.ccn, h.website, h.zip_code,
       COALESCE(h.city, p.hospital_name) as city,
       h.state as state,
       COALESCE(c.score, 0) as score
-    FROM prices p
-    LEFT JOIN hospitals h ON h.ccn = p.ein
-    LEFT JOIN compliance c ON c.ccn = h.ccn
+    ${baseFrom}
     WHERE p.cash_price IS NOT NULL
       AND p.cash_price > 0
   `;
@@ -230,9 +286,12 @@ function buildQuery(query: string, state: string = '', zip: string = '', minConf
   }
 
   if (mappedCpt.length > 0) {
-    if (/^[A-Z]?\d{4,5}$/i.test(mappedCpt)) {
+    if (isNumericCpt) {
       sql += ` AND (p.cpt_code = ? OR p.cpt_code LIKE ? OR p.cpt_code LIKE ?)`;
       params.push(mappedCpt, `${mappedCpt}-%`, `${mappedCpt} %`);
+    } else if (usedFts && ftsQ) {
+      sql += ` AND (fts MATCH ? OR p.cpt_code LIKE ?)`;
+      params.push(ftsQ, `%${mappedCpt}%`);
     } else {
       sql += ` AND (p.description LIKE ? OR p.cpt_code LIKE ?)`;
       params.push(`%${mappedCpt}%`, `%${mappedCpt}%`);
@@ -253,7 +312,7 @@ function buildQuery(query: string, state: string = '', zip: string = '', minConf
   }
 
   sql += ` ORDER BY ${resolveOrderBy(sort)} LIMIT ${limit} OFFSET ${offset}`;
-  return { sql, params, mapped: mappedCpt };
+  return { sql, params, mapped: mappedCpt, usedFts };
 }
 
 async function countForQuery(w: any, sql: string, params: any[]): Promise<number> {
@@ -267,29 +326,33 @@ async function marketForQuery(w: any, sql: string, params: any[]) {
   const marketSql = `
     WITH filtered AS (
       ${baseSql}
+    ), ranked AS (
+      SELECT
+        cash_price,
+        ROW_NUMBER() OVER (ORDER BY cash_price) as rn,
+        COUNT(1) OVER () as cnt
+      FROM filtered
+      WHERE cash_price IS NOT NULL
     )
     SELECT
       MIN(cash_price) as min,
       MAX(cash_price) as max,
-      AVG(cash_price) as mean
-    FROM filtered
-    WHERE cash_price IS NOT NULL
+      AVG(CASE WHEN rn IN ((cnt + 1) / 2, (cnt + 2) / 2) THEN cash_price END) as median,
+      MIN(CASE WHEN rn >= CAST(CEIL(cnt * 0.10) AS INT) THEN cash_price END) as p10,
+      MIN(CASE WHEN rn >= CAST(CEIL(cnt * 0.90) AS INT) THEN cash_price END) as p90
+    FROM ranked
   `;
   const rows = await w.db.query(marketSql, params) as any[];
   const first = rows?.[0];
-  if (!first || first.min == null || first.max == null) {
+  if (!first || first.min == null || first.max == null || first.median == null || first.p10 == null || first.p90 == null) {
     return null;
   }
-  const min = Number(first.min);
-  const max = Number(first.max);
-  const range = max - min;
-  const mean = first.mean == null ? (min + max) / 2 : Number(first.mean);
   return {
-    min,
-    median: mean,
-    p10: min + 0.1 * range,
-    p90: min + 0.9 * range,
-    max,
+    min: Number(first.min),
+    median: Number(first.median),
+    p10: Number(first.p10),
+    p90: Number(first.p90),
+    max: Number(first.max),
   };
 }
 
@@ -300,42 +363,75 @@ export async function searchPricesWithMeta(query: string, state: string = '', zi
   }
 
   const w = await getSharedWorker(DB_URL);
-  const withAttributionConfidence = await hasAttributionConfidenceColumn();
+  const [withAttributionConfidence, ftsAvailable] = await Promise.all([
+    hasAttributionConfidenceColumn(),
+    hasPricesFtsTable(),
+  ]);
   const normQuery = normalizeQuery(query);
   let results: any[] = [];
   let finalSql = '';
   let finalParams: any[] = [];
 
-  const queryObj = buildQuery(normQuery, state, zip, minConfidence, withAttributionConfidence, sort, limit, offset);
-  finalSql = queryObj.sql;
-  finalParams = queryObj.params;
-  results = await w.db.query(queryObj.sql, queryObj.params) as any[];
+  const runTextSearch2 = async (b: (useFts: boolean) => ReturnType<typeof buildQuery>) => {
+    let qo = b(ftsAvailable);
+    let rows = (await w.db.query(qo.sql, qo.params)) as any[];
+    if (rows.length === 0 && qo.usedFts) {
+      qo = b(false);
+      rows = (await w.db.query(qo.sql, qo.params)) as any[];
+    }
+    return { rows, qo };
+  };
 
-  // Local fuzzy fallback: allow semantic text matching in-state before widening scope
+  {
+    const b = (ft: boolean) =>
+      buildQuery(
+        normQuery,
+        state,
+        zip,
+        minConfidence,
+        withAttributionConfidence,
+        sort,
+        limit,
+        offset,
+        ft
+      );
+    const { rows, qo } = await runTextSearch2(b);
+    results = rows;
+    finalSql = qo.sql;
+    finalParams = qo.params;
+  }
+
   if (results.length === 0 && state) {
-    const localFuzzy = await w.db.query(
-      `SELECT 
+    const ftsNorm = toFtsMatchFromTokens(normQuery);
+    let localFuzzy: any[] = [];
+    let localFtsPath = false;
+    if (ftsAvailable && ftsNorm) {
+      localFuzzy = (await w.db.query(
+        `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
          h.state as state,
          COALESCE(c.score, 0) as score
        FROM prices p
+       INNER JOIN prices_fts fts ON fts.rowid = p.rowid
        LEFT JOIN hospitals h ON h.ccn = p.ein
        LEFT JOIN compliance c ON c.ccn = h.ccn
        WHERE p.cash_price IS NOT NULL
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
          AND h.state = ?
-         AND LOWER(p.description) LIKE ?
+         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
        ORDER BY ${resolveOrderBy(sort)}
        LIMIT ${limit} OFFSET ${offset}`,
-      withAttributionConfidence
-        ? [minConfidence, state.toUpperCase(), `%${normQuery}%`]
-        : [state.toUpperCase(), `%${normQuery}%`]
-    ) as any[];
-
-    if (localFuzzy.length > 0) {
-      finalSql = `SELECT 
+        withAttributionConfidence
+          ? [minConfidence, state.toUpperCase(), ftsNorm, `%${normQuery}%`, `%${normQuery}%`]
+          : [state.toUpperCase(), ftsNorm, `%${normQuery}%`, `%${normQuery}%`]
+      )) as any[];
+      localFtsPath = localFuzzy.length > 0;
+    }
+    if (localFuzzy.length === 0) {
+      localFuzzy = (await w.db.query(
+        `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
          h.state as state,
@@ -347,58 +443,132 @@ export async function searchPricesWithMeta(query: string, state: string = '', zi
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
          AND h.state = ?
-         AND LOWER(p.description) LIKE ?
+         AND (LOWER(p.description) LIKE ? OR p.cpt_code LIKE ?)
+       ORDER BY ${resolveOrderBy(sort)}
+       LIMIT ${limit} OFFSET ${offset}`,
+        withAttributionConfidence
+          ? [minConfidence, state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`]
+          : [state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`]
+      )) as any[];
+    }
+
+    if (localFuzzy.length > 0) {
+      if (localFtsPath) {
+        finalSql = `SELECT
+         p.*, h.ccn, h.website, h.zip_code,
+         COALESCE(h.city, p.hospital_name) as city,
+         h.state as state,
+         COALESCE(c.score, 0) as score
+       FROM prices p
+       INNER JOIN prices_fts fts ON fts.rowid = p.rowid
+       LEFT JOIN hospitals h ON h.ccn = p.ein
+       LEFT JOIN compliance c ON c.ccn = h.ccn
+       WHERE p.cash_price IS NOT NULL
+         AND p.cash_price > 0
+         ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
+         AND h.state = ?
+         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
       ORDER BY ${resolveOrderBy(sort)}
       LIMIT ${limit} OFFSET ${offset}`;
-      finalParams = withAttributionConfidence
-        ? [minConfidence, state.toUpperCase(), `%${normQuery}%`]
-        : [state.toUpperCase(), `%${normQuery}%`];
+        finalParams = withAttributionConfidence
+          ? [minConfidence, state.toUpperCase(), ftsNorm!, `%${normQuery}%`, `%${normQuery}%`]
+          : [state.toUpperCase(), ftsNorm!, `%${normQuery}%`, `%${normQuery}%`];
+      } else {
+        finalSql = `SELECT
+         p.*, h.ccn, h.website, h.zip_code,
+         COALESCE(h.city, p.hospital_name) as city,
+         h.state as state,
+         COALESCE(c.score, 0) as score
+       FROM prices p
+       LEFT JOIN hospitals h ON h.ccn = p.ein
+       LEFT JOIN compliance c ON c.ccn = h.ccn
+       WHERE p.cash_price IS NOT NULL
+         AND p.cash_price > 0
+         ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
+         AND h.state = ?
+         AND (LOWER(p.description) LIKE ? OR p.cpt_code LIKE ?)
+      ORDER BY ${resolveOrderBy(sort)}
+      LIMIT ${limit} OFFSET ${offset}`;
+        finalParams = withAttributionConfidence
+          ? [minConfidence, state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`]
+          : [state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`];
+      }
       results = localFuzzy;
     }
   }
 
   if (results.length === 0 && (state || zip)) {
-    const national = buildQuery(normQuery, '', zip, minConfidence, withAttributionConfidence, sort, limit, offset);
-    results = await w.db.query(national.sql, national.params) as any[];
-    if (results.length > 0) {
-      finalSql = national.sql;
-      finalParams = national.params;
-      results = markFallback(results, 'national_scope', 'National Result');
+    const b = (ft: boolean) =>
+      buildQuery(
+        normQuery,
+        '',
+        zip,
+        minConfidence,
+        withAttributionConfidence,
+        sort,
+        limit,
+        offset,
+        ft
+      );
+    const { rows, qo } = await runTextSearch2(b);
+    if (rows.length > 0) {
+      finalSql = qo.sql;
+      finalParams = qo.params;
+      results = markFallback(rows, 'national_scope', 'National Result');
     }
   }
 
   if (results.length === 0 && zip) {
-    const nationalNoZip = buildQuery(normQuery, '', '', minConfidence, withAttributionConfidence, sort, limit, offset);
-    results = await w.db.query(nationalNoZip.sql, nationalNoZip.params) as any[];
-    if (results.length > 0) {
-      finalSql = nationalNoZip.sql;
-      finalParams = nationalNoZip.params;
-      results = markFallback(results, 'zip_relaxed_national', 'National (ZIP Relaxed)');
+    const b = (ft: boolean) =>
+      buildQuery(
+        normQuery,
+        '',
+        '',
+        minConfidence,
+        withAttributionConfidence,
+        sort,
+        limit,
+        offset,
+        ft
+      );
+    const { rows, qo } = await runTextSearch2(b);
+    if (rows.length > 0) {
+      finalSql = qo.sql;
+      finalParams = qo.params;
+      results = markFallback(rows, 'zip_relaxed_national', 'National (ZIP Relaxed)');
     }
   }
 
   if (results.length === 0) {
-    const nationalText = await w.db.query(
-      `SELECT 
+    const ftsN = toFtsMatchFromTokens(normQuery);
+    let nationalText: any[] = [];
+    let nationalTextFts = false;
+    if (ftsAvailable && ftsN) {
+      nationalText = (await w.db.query(
+        `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
          h.state as state,
          COALESCE(c.score, 0) as score
        FROM prices p
+       INNER JOIN prices_fts fts ON fts.rowid = p.rowid
        LEFT JOIN hospitals h ON h.ccn = p.ein
        LEFT JOIN compliance c ON c.ccn = h.ccn
        WHERE p.cash_price IS NOT NULL
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
-         AND LOWER(p.description) LIKE ?
+         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
        ORDER BY ${resolveOrderBy(sort)}
        LIMIT 100`,
-      withAttributionConfidence
-        ? [minConfidence, `%${normQuery}%`]
-        : [`%${normQuery}%`]
-    ) as any[];
-    if (nationalText.length > 0) {
-      finalSql = `SELECT 
+        withAttributionConfidence
+          ? [minConfidence, ftsN, `%${normQuery}%`, `%${normQuery}%`]
+          : [ftsN, `%${normQuery}%`, `%${normQuery}%`]
+      )) as any[];
+      nationalTextFts = nationalText.length > 0;
+    }
+    if (nationalText.length === 0) {
+      nationalText = (await w.db.query(
+        `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
          h.state as state,
@@ -409,32 +579,88 @@ export async function searchPricesWithMeta(query: string, state: string = '', zi
        WHERE p.cash_price IS NOT NULL
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
-         AND LOWER(p.description) LIKE ?
+         AND (LOWER(p.description) LIKE ? OR p.cpt_code LIKE ?)
+       ORDER BY ${resolveOrderBy(sort)}
+       LIMIT 100`,
+        withAttributionConfidence
+          ? [minConfidence, `%${normQuery}%`, `%${normQuery}%`]
+          : [`%${normQuery}%`, `%${normQuery}%`]
+      )) as any[];
+    }
+    if (nationalText.length > 0) {
+      if (nationalTextFts) {
+        finalSql = `SELECT
+         p.*, h.ccn, h.website, h.zip_code,
+         COALESCE(h.city, p.hospital_name) as city,
+         h.state as state,
+         COALESCE(c.score, 0) as score
+       FROM prices p
+       INNER JOIN prices_fts fts ON fts.rowid = p.rowid
+       LEFT JOIN hospitals h ON h.ccn = p.ein
+       LEFT JOIN compliance c ON c.ccn = h.ccn
+       WHERE p.cash_price IS NOT NULL
+         AND p.cash_price > 0
+         ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
+         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
       ORDER BY ${resolveOrderBy(sort)}
       LIMIT ${limit} OFFSET ${offset}`;
-      finalParams = withAttributionConfidence
-        ? [minConfidence, `%${normQuery}%`]
-        : [`%${normQuery}%`];
+        finalParams = withAttributionConfidence
+          ? [minConfidence, ftsN!, `%${normQuery}%`, `%${normQuery}%`]
+          : [ftsN!, `%${normQuery}%`, `%${normQuery}%`];
+      } else {
+        finalSql = `SELECT
+         p.*, h.ccn, h.website, h.zip_code,
+         COALESCE(h.city, p.hospital_name) as city,
+         h.state as state,
+         COALESCE(c.score, 0) as score
+       FROM prices p
+       LEFT JOIN hospitals h ON h.ccn = p.ein
+       LEFT JOIN compliance c ON c.ccn = h.ccn
+       WHERE p.cash_price IS NOT NULL
+         AND p.cash_price > 0
+         ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
+         AND (LOWER(p.description) LIKE ? OR p.cpt_code LIKE ?)
+      ORDER BY ${resolveOrderBy(sort)}
+      LIMIT ${limit} OFFSET ${offset}`;
+        finalParams = withAttributionConfidence
+          ? [minConfidence, `%${normQuery}%`, `%${normQuery}%`]
+          : [`%${normQuery}%`, `%${normQuery}%`];
+      }
       results = markFallback(nationalText, 'national_text_match', 'National Text Match');
     }
   }
 
   if (results.length === 0) {
-      const entry = CPT_CATALOG.find(e => {
-        const plain = e.plain.toLowerCase();
-        const technical = e.technical.toLowerCase();
-        return e.code === normQuery || plain === normQuery || plain.includes(normQuery) || technical.includes(normQuery);
-      });
-      if (entry) {
-          const fallbackCode = CATEGORY_FALLBACK[entry.category] || AUDIT_NODES.GENERAL;
-            const catQuery = buildQuery(fallbackCode, '', zip, minConfidence, withAttributionConfidence, sort, limit, offset);
-          results = await w.db.query(catQuery.sql, catQuery.params) as any[];
-          if (results.length > 0) {
-            finalSql = catQuery.sql;
-            finalParams = catQuery.params;
-            results = markFallback(results, 'category_fallback', 'Category Fallback');
-          }
+    const entry = CPT_CATALOG.find((e) => {
+      const plain = e.plain.toLowerCase();
+      const technical = e.technical.toLowerCase();
+      return (
+        e.code === normQuery ||
+        plain === normQuery ||
+        plain.includes(normQuery) ||
+        technical.includes(normQuery)
+      );
+    });
+    if (entry) {
+      const fallbackCode = CATEGORY_FALLBACK[entry.category] || AUDIT_NODES.GENERAL;
+      const catQuery = buildQuery(
+        fallbackCode,
+        '',
+        zip,
+        minConfidence,
+        withAttributionConfidence,
+        sort,
+        limit,
+        offset,
+        false
+      );
+      const catRows = (await w.db.query(catQuery.sql, catQuery.params)) as any[];
+      if (catRows.length > 0) {
+        finalSql = catQuery.sql;
+        finalParams = catQuery.params;
+        results = markFallback(catRows, 'category_fallback', 'Category Fallback');
       }
+    }
   }
 
   // No generic baseline fallback: better to return no result than unrelated procedures.

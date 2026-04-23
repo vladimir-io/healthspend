@@ -33,6 +33,49 @@ SCRAPER_COMP_DB = os.environ.get("SCRAPER_COMP_DB", "scraper/compliance.db")
 SCRAPER_PRICES_DB = os.environ.get("SCRAPER_PRICES_DB", "scraper/prices.db")
 
 
+def apply_search_optimizations(conn: sqlite3.Connection) -> None:
+    """
+    B-tree indexes for hot search joins, optional FTS5 on prices.description
+    (tokenized, prefix-capable) plus ANALYZE for the planner. Safe to re-run.
+    """
+    cur = conn.cursor()
+    for stmt in (
+        "CREATE INDEX IF NOT EXISTS idx_prices_ein ON prices(ein)",
+        "CREATE INDEX IF NOT EXISTS idx_prices_cpt_code ON prices(cpt_code)",
+        "CREATE INDEX IF NOT EXISTS idx_prices_ein_cpt ON prices(ein, cpt_code)",
+        "CREATE INDEX IF NOT EXISTS idx_prices_attribution_confidence ON prices(attribution_confidence)",
+        "CREATE INDEX IF NOT EXISTS idx_hospitals_state ON hospitals(state)",
+        "CREATE INDEX IF NOT EXISTS idx_hospitals_state_zip ON hospitals(state, zip_code)",
+    ):
+        try:
+            cur.execute(stmt)
+        except sqlite3.OperationalError:
+            pass
+    has_prices = cur.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='prices'"
+    ).fetchone()
+    if has_prices:
+        try:
+            cur.execute(
+                """
+                CREATE VIRTUAL TABLE IF NOT EXISTS prices_fts USING fts5(
+                    description,
+                    content='prices',
+                    content_rowid='rowid',
+                    tokenize = 'unicode61'
+                )
+                """
+            )
+            cur.execute("INSERT INTO prices_fts(prices_fts) VALUES('rebuild')")
+        except sqlite3.OperationalError as e:
+            print(f"  (FTS5 build skipped: {e})")
+    try:
+        cur.execute("ANALYZE")
+    except sqlite3.OperationalError:
+        pass
+    conn.commit()
+
+
 def ensure_audit_compliance_columns(conn: sqlite3.Connection) -> None:
     """
     Migrate audit_data.db's compliance table to include the Rust scraper
@@ -225,12 +268,12 @@ def main() -> None:
     conn.execute("PRAGMA journal_mode=WAL")
 
     # ── 1. Migrate compliance schema ────────────────────────────────────────
-    print("\n[1/3] Migrating compliance schema for MRF audit columns…")
+    print("\n[1/4] Migrating compliance schema for MRF audit columns…")
     ensure_audit_compliance_columns(conn)
     print("  ✓ Schema ready")
 
     # ── 2. Merge compliance scores ──────────────────────────────────────────
-    print(f"\n[2/3] Merging MRF audit results from scraper/compliance.db…")
+    print(f"\n[2/4] Merging MRF audit results from scraper/compliance.db…")
     if not os.path.exists(SCRAPER_COMP_DB):
         print(f"  ⚠  {SCRAPER_COMP_DB} not found — skipping (will run on CI where scraper ran first)")
     else:
@@ -239,7 +282,7 @@ def main() -> None:
         print_score_distribution(conn)
 
     # ── 3. Merge prices ─────────────────────────────────────────────────────
-    print(f"\n[3/3] Pushing fresh prices from scraper/prices.db…")
+    print(f"\n[3/4] Pushing fresh prices from scraper/prices.db…")
     if not os.path.exists(SCRAPER_PRICES_DB):
         print(f"  ⚠  {SCRAPER_PRICES_DB} not found — skipping")
     else:
@@ -249,6 +292,9 @@ def main() -> None:
         else:
             print(f"  ✓ Upserted {n} price rows into the public deployment payload")
 
+    print("\n[4/4] Search indexes, FTS, ANALYZE…")
+    apply_search_optimizations(conn)
+    print("  ✓ Search layer optimized")
     conn.close()
     print("\n" + "=" * 55)
     print("  ✓ Pipeline integration complete.")
