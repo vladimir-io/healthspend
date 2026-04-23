@@ -127,11 +127,22 @@ def compute_flags(base_row: dict, quality: dict, score: int) -> tuple:
     ems        = base_row.get("Emergency Services", "No").strip()
     birthing   = base_row.get("Meets criteria for birthing friendly designation", "").strip()
 
+    def as_int(v):
+        try:
+            return int(v or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    safety_measures = as_int((quality or {}).get("count_of_facility_safety_measures"))
+    mort_measures = as_int((quality or {}).get("count_of_facility_mort_measures"))
+    pt_exp_measures = as_int((quality or {}).get("count_of_facility_pt_exp_measures"))
+    readm_measures = as_int((quality or {}).get("count_of_facility_readm_measures"))
+
     txt_exists       = 1 if raw_rating not in ("Not Available", "") else 0
     robots_ok        = 1 if ems == "Yes" else 0
-    mrf_reachable    = 0  # populated by active MRF audit in merge_pipeline_data.py
-    mrf_valid        = 0
-    mrf_fresh        = 0
+    mrf_reachable    = 1 if (safety_measures + mort_measures) >= 5 else 0
+    mrf_valid        = 1 if pt_exp_measures >= 2 else 0
+    mrf_fresh        = 1 if readm_measures >= 3 else 0
     shoppable_exists = 1 if birthing == "Y" else 0
 
     return txt_exists, robots_ok, mrf_reachable, mrf_valid, mrf_fresh, shoppable_exists

@@ -32,7 +32,11 @@ const CHECK_DEFS = [
         source: 'CMS Hospital Compare',
         field: 'Safety + Mortality Measures Reported',
         cite: 'CMS Quality Reporting',
-        getOk: (r: ComplianceRecord) => r.mrf_reachable,
+        getOk: (r: ComplianceRecord) => {
+            if (r.mrf_reachable === 1) return 1;
+            if (r.mrf_reachable === 0 && (r.safety_measures || r.mort_measures)) return (r.safety_measures + r.mort_measures) >= 5 ? 1 : 0;
+            return r.mrf_reachable;
+        },
         passLabel: 'Adequate',
         failLabel: 'Low Coverage',
         explanation: `CMS tracks how many quality measures each hospital actually submits data for. A hospital reporting fewer than 5 measures across safety and mortality domains is either very small or actively suppressing data submission. Hospitals with low measure coverage receive fewer patients who can make informed choices — which is the same problem price opacity creates.`,
@@ -44,7 +48,11 @@ const CHECK_DEFS = [
         source: 'CMS HCAHPS Survey',
         field: 'Patient Experience Measures Reported',
         cite: 'HCAHPS Program',
-        getOk: (r: ComplianceRecord) => r.mrf_valid,
+        getOk: (r: ComplianceRecord) => {
+            if (r.mrf_valid === 1) return 1;
+            if (r.mrf_valid === 0 && r.pt_exp_measures) return r.pt_exp_measures >= 2 ? 1 : 0;
+            return r.mrf_valid;
+        },
         passLabel: 'Submitted',
         failLabel: 'Not Submitted',
         explanation: `The HCAHPS (Hospital Consumer Assessment of Healthcare Providers and Systems) survey is the national standard for measuring patients' experience in hospitals. Submitting HCAHPS data is required for full Medicare payment. Hospitals that don't submit this data receive a 2% Medicare payment reduction — so non-reporters are either penalized specialty facilities or facilities choosing to trade revenue for opacity.`,
@@ -56,7 +64,11 @@ const CHECK_DEFS = [
         source: 'CMS Hospital Readmissions',
         field: 'READM Measures Reported',
         cite: 'HRRP Program',
-        getOk: (r: ComplianceRecord) => r.mrf_fresh,
+        getOk: (r: ComplianceRecord) => {
+            if (r.mrf_fresh === 1) return 1;
+            if (r.mrf_fresh === 0 && r.readm_measures) return r.readm_measures >= 3 ? 1 : 0;
+            return r.mrf_fresh;
+        },
         passLabel: 'Reported',
         failLabel: 'Not Reported',
         explanation: `The Hospital Readmissions Reduction Program (HRRP) requires hospitals to report readmission rates for conditions like heart failure, pneumonia, and hip/knee replacement. This is one of the most direct indicators of care quality and follow-through. Facilities not reporting readmissions data have less accountable clinical systems, which correlates with billing practices that are harder for patients to challenge.`,
