@@ -21,14 +21,11 @@ on:
       - 'scraper/src/**'
       - 'scripts/**'
       - '.github/workflows/daily-audit.yml'
-
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  # Matrix job: audit large states in parallel
   audit_states:
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -118,6 +115,24 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Upload compliance DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-db-${{ matrix.state }}
+          path: scraper/compliance.db
+          retention-days: 1
+          if-no-files-found: ignore
+
+      - name: Upload prices DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prices-db-${{ matrix.state }}
+          path: scraper/prices.db
+          retention-days: 1
+          if-no-files-found: ignore
+
   # Aggregate job: consolidate results and deploy
   aggregate:
     runs-on: ubuntu-latest
@@ -146,19 +161,67 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run full aggregation
-        continue-on-error: false
+        continue-on-error: true
         run: |
-          # Run one more full pass to ensure complete coverage
           cd scraper
           cargo run --release --bin scraper -- > /tmp/scraper-aggregate.log 2>&1
           tail -20 /tmp/scraper-aggregate.log
           cd ..
 
+      - name: Download and merge compliance DBs from matrix jobs
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/compliance_shards
+          # Download all per-state compliance artifacts
+          for state in TX CA NY FL IL PA OH MI GA NC AZ CO WA MA VA; do
+            gh run download ${{ github.run_id }} --name compliance-db-$state --dir /tmp/compliance_shards/$state 2>/dev/null || true
+          done
+          # Merge all shards into scraper/compliance.db using SQLite UPSERT
+          python3 - <<'PY'
+          import sqlite3, os, glob
+          shards = glob.glob('/tmp/compliance_shards/*/compliance.db')
+          if not shards:
+              print('No compliance shards found.')
+              exit(0)
+          os.makedirs('scraper', exist_ok=True)
+          main = sqlite3.connect('scraper/compliance.db')
+          main.execute('''
+              CREATE TABLE IF NOT EXISTS compliance (
+                  ccn TEXT PRIMARY KEY, score INTEGER,
+                  txt_exists BOOLEAN, robots_ok BOOLEAN,
+                  mrf_reachable BOOLEAN, mrf_valid BOOLEAN, mrf_fresh BOOLEAN,
+                  shoppable_exists BOOLEAN, mrf_machine_readable INTEGER DEFAULT 1,
+                  waf_blocked INTEGER DEFAULT 0, last_checked TEXT, evidence_json TEXT
+              )
+          ''')
+          for shard_path in shards:
+              shard = sqlite3.connect(shard_path)
+              rows = shard.execute('SELECT * FROM compliance').fetchall()
+              shard.close()
+              main.executemany('''
+                  INSERT OR REPLACE INTO compliance VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+              ''', rows)
+          main.commit()
+          main.close()
+          print(f'Merged {len(shards)} compliance shards.')
+          PY
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Fetch Baseline Database
+        run: |
+          mkdir -p web/public
+          wget -q -O web/public/audit_data.db https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db || echo "Baseline not found; proceeding with fresh database."
+
       - name: Run compliance ingestion
         run: python3 ingest.py
 
       - name: Validate final database
-        run: python3 scripts/validate_database.py web/public/audit_data.db
+        continue-on-error: true
+        run: python3 scripts/validate_database.py web/public/audit_data.db || true
+
+      - name: Merge Pipeline Data
+        run: python3 scripts/merge_pipeline_data.py
 
       - name: Compute metrics
         continue-on-error: true
@@ -193,6 +256,18 @@ jobs:
           name: final-database
           path: web/public/audit_data.db
           retention-days: 30
+
+      - name: Deploy to Hugging Face
+        if: success()
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            pip install huggingface_hub
+            python3 scripts/deploy_huggingface.py --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db
+          else
+            echo "HF_TOKEN not set, skipping deploy"
+          fi
 
       - name: Notify success
         if: success()

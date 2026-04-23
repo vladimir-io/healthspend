@@ -165,7 +165,6 @@ function renderRecommendations(recs: {query: string, code: string}[]) {
     });
 }
 
-// Hide recommendations on click outside
 document.addEventListener('click', (e) => {
     if (!recommendationEl.contains(e.target as Node) && e.target !== input) {
         recommendationEl.classList.add('hidden');
@@ -193,7 +192,7 @@ stateSelect.addEventListener('change', () => {
     if (query.length > 2) performSearch(query, state);
 });
 
-// --- SOTA UI Routing ---
+
 function setupRouting() {
   const tabs = document.querySelectorAll('.nav-tab');
   const indicator = document.getElementById('nav-indicator');
@@ -301,7 +300,7 @@ async function init() {
   });
 }
 
-// --- Canvas Search Animation ---
+
 function setupCptPanel() {
   const overlay     = document.getElementById('cpt-overlay')!;
   const backdrop    = document.getElementById('cpt-backdrop')!;
@@ -605,7 +604,6 @@ async function performSearch(query: string, state: string = '') {
             applySortAndRender();
         }
     } catch (e) {
-      console.error("VFS Search Error:", e);
       setSearchLoading(false);
       contextBanner.classList.remove('hidden');
       currentResults = [];
@@ -787,8 +785,8 @@ function renderResults(results: any[]) {
         });
         resultsContainer.appendChild(el);
         renderedCount += 1;
-      } catch (err) {
-        console.error('Result row render error', err, row);
+      } catch {
+        // skip malformed row
       }
     });
 

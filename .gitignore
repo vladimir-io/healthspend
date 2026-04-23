@@ -1,49 +1,62 @@
-# Healthspend v1.0 .gitignore
+# Healthspend — .gitignore
+# See docs/CONTRIBUTING.md for local dev setup notes.
 
-# Build outputs
-dist/
-web/dist/
+# ── Rust build outputs ──────────────────────────────────────────────────────
 target/
 *.o
 *.a
 *.so
 .cargo/
 
-# Dependencies
+# ── Node / Web ──────────────────────────────────────────────────────────────
 node_modules/
 .npm/
+web/dist/
+dist/
+
+# Node binaries downloaded for CI bootstrapping
+node-v*.tar.xz
+node-v*/
+
+# ── Python ──────────────────────────────────────────────────────────────────
 __pycache__/
+*.py[cod]
 *.egg-info/
 .venv/
 venv/
+.mypy_cache/
+.pytest_cache/
 
-# Data files
-*.csv
+# ── Database files ──────────────────────────────────────────────────────────
 *.db
 *.db-*
 *.db-journal
+*.db-shm
+*.db-wal
 scraper/*.db*
+mrf_temp/
 
-# EXCEPTION: Audit data is tracked for regulatory compliance
-!web/public/audit_data.db
-!web/public/favicon.ico
+# ── Large data files ─────────────────────────────────────────────────────────
+*.csv
 
-# Temporary/local files
+# ── Test / scratch scripts ───────────────────────────────────────────────────
+test_hf.py
+test_hf.js
+web/test_query*.mjs
+
+# ── Temporary / logs ─────────────────────────────────────────────────────────
 *.log
 *.tmp
 *.temp
 *.pid
+
+# ── OS artifacts ─────────────────────────────────────────────────────────────
 .DS_Store
+.AppleDouble
+.LSOverride
 Thumbs.db
 
-# Python cache
-*.pyc
-*.pyo
-*.pyd
-.mypy_cache/
-.pytest_cache/
-
-# IDEs
+# ── IDEs ─────────────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
@@ -52,23 +65,29 @@ Thumbs.db
 .project
 .classpath
 
-# Environment variables
+# ── Environment / secrets ────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
 web/.env
 web/.env.local
 web/.env.*.local
+wrangler.toml
 
-# OS-specific
-.DS_Store
-.AppleDouble
-.LSOverride
-
-!web/public/visibility/
-!web/public/api/v1/
+# ── Tracked exceptions ───────────────────────────────────────────────────────
+!web/public/favicon.ico
+!web/public/og-image.png
 !web/public/sitemap.xml
+!web/public/index.html
+!web/public/_headers
 !web/public/media-brief-2026.html
 !web/public/transparency-2026.html
 !web/public/transparency-index.html
 !web/public/mri-variation-report.html
+!web/public/state-of-non-compliance-2026.html
+!web/public/api/
+!web/public/visibility/
+!web/public/embed/
+!scraper/data/test_*.json
+!scraper/data/test_*.csv
+

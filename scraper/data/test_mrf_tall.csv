@@ -1,0 +1,3 @@
+hospital_name,last_updated_on,code|1,code|1|type,description,standard_charge|gross,standard_charge|discounted_cash,standard_charge|negotiated_dollar,payer_name,plan_name
+Hosp A,2026-04-01,12345,CPT,Test Proc,150.00,100.00,120.00,Aetna,PPO
+Hosp A,2026-04-01,98765,CPT,Other Proc,200.00,180.00,190.00,Cigna,HMO

@@ -88,8 +88,8 @@ export async function showAuditDetail(record: ComplianceRecord) {
             if (enriched) {
                 detailRecord = enriched;
             }
-        } catch (e) {
-            console.warn('[HS] Failed to fetch enriched compliance detail:', e);
+        } catch {
+            // enrichment is best-effort; fall through with base record
         }
     }
 

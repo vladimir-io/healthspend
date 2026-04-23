@@ -26,10 +26,8 @@ def main() -> int:
     parser.add_argument("--nppes-endpoints")
     parser.add_argument("--cms-attesters")
     parser.add_argument("--benchmark-label", default="", help="Run p50/p95 benchmark with this label")
-    parser.add_argument("--publish-bucket", default="", help="If set, publish hot artifacts to this R2 bucket")
-    parser.add_argument("--publish-prefix", default="hot", help="R2 key prefix for publish step")
-    parser.add_argument("--publish-files", nargs="*", default=["web/public/audit_data.db"], help="Artifact files for R2 publish")
-    parser.add_argument("--dry-run-publish", action="store_true", help="Print R2 publish commands without executing")
+    parser.add_argument("--publish-hf", default="", help="If set, publish artifacts to this Hugging Face dataset (e.g. vladimir-io/healthspend-data)")
+    parser.add_argument("--publish-files", nargs="*", default=["web/public/audit_data.db"], help="Artifact files for publish")
     parser.add_argument("--mrf-dir", default="", help="Optional directory containing downloaded MRF files")
     parser.add_argument("--cleanup", action="store_true", help="Alias for --cleanup-mrf-dir")
     parser.add_argument("--cleanup-mrf-dir", action="store_true", help="Delete --mrf-dir after the pipeline completes successfully")
@@ -115,19 +113,15 @@ def main() -> int:
             repo,
         )
 
-    if args.publish_bucket:
+    if args.publish_hf:
         cmd = [
             "python3",
-            "scripts/deploy_artifacts.py",
-            "--bucket",
-            args.publish_bucket,
-            "--prefix",
-            args.publish_prefix,
+            "scripts/deploy_huggingface.py",
+            "--repo-id",
+            args.publish_hf,
             "--files",
             *args.publish_files,
         ]
-        if args.dry_run_publish:
-            cmd.append("--dry-run")
         run(" ".join(shlex.quote(x) for x in cmd), repo)
 
     if args.cleanup or args.cleanup_mrf_dir:

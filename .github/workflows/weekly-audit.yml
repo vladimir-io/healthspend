@@ -9,7 +9,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   audit_states:
@@ -136,11 +135,19 @@ jobs:
           tail -20 /tmp/scraper-aggregate.log
           cd ..
 
+      - name: Fetch Baseline Database
+        run: |
+          mkdir -p web/public
+          wget -q -O web/public/audit_data.db https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db || echo "Baseline not found; proceeding with fresh database."
+
       - name: Run compliance ingestion (UPSERT)
         run: python3 ingest.py
 
       - name: Validate final database
         run: python3 scripts/validate_database.py web/public/audit_data.db
+
+      - name: Merge Pipeline Data
+        run: python3 scripts/merge_pipeline_data.py
 
       - name: Compute metrics
         continue-on-error: true
@@ -171,6 +178,18 @@ jobs:
           name: weekly-full-database
           path: web/public/audit_data.db
           retention-days: 30
+
+      - name: Deploy to Hugging Face
+        if: success()
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -n "$HF_TOKEN" ]; then
+            pip install huggingface_hub
+            python3 scripts/deploy_huggingface.py --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db
+          else
+            echo "Skipping Hugging Face deployment because HF_TOKEN secret is not set."
+          fi
 
       - name: Notify success
         if: success()

@@ -1,16 +1,17 @@
 import { defineConfig } from 'vite';
 
-// Healthspend v1.0 Standard Vite Configuration
 export default defineConfig({
   root: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
     rollupOptions: {
-      input: {
-        main: './index.html',
-      },
+      input: { main: './index.html' },
+      external: ['turbolite'],
     },
+  },
+  optimizeDeps: {
+    exclude: ['turbolite'],
   },
   server: {
     port: 5173,
