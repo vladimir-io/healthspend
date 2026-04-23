@@ -6,6 +6,7 @@ import { DB_URL, NPI_CONFIDENCE_THRESHOLD } from './config';
 const DEFAULT_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
 
 const cache: Map<string, SearchResponse> = new Map();
+const MAX_SEARCH_CACHE = 48;
 let pricesHasAttributionConfidence: boolean | null = null;
 
 type SearchSort = 'price-asc' | 'price-desc' | 'score-desc';
@@ -266,33 +267,29 @@ async function marketForQuery(w: any, sql: string, params: any[]) {
   const marketSql = `
     WITH filtered AS (
       ${baseSql}
-    ), ranked AS (
-      SELECT
-        cash_price,
-        ROW_NUMBER() OVER (ORDER BY cash_price) as rn,
-        COUNT(1) OVER () as cnt
-      FROM filtered
-      WHERE cash_price IS NOT NULL
     )
     SELECT
       MIN(cash_price) as min,
       MAX(cash_price) as max,
-      AVG(CASE WHEN rn IN ((cnt + 1) / 2, (cnt + 2) / 2) THEN cash_price END) as median,
-      MIN(CASE WHEN rn >= CAST(CEIL(cnt * 0.10) AS INT) THEN cash_price END) as p10,
-      MIN(CASE WHEN rn >= CAST(CEIL(cnt * 0.90) AS INT) THEN cash_price END) as p90
-    FROM ranked
+      AVG(cash_price) as mean
+    FROM filtered
+    WHERE cash_price IS NOT NULL
   `;
   const rows = await w.db.query(marketSql, params) as any[];
   const first = rows?.[0];
-  if (!first || first.min == null || first.max == null || first.median == null || first.p10 == null || first.p90 == null) {
+  if (!first || first.min == null || first.max == null) {
     return null;
   }
+  const min = Number(first.min);
+  const max = Number(first.max);
+  const range = max - min;
+  const mean = first.mean == null ? (min + max) / 2 : Number(first.mean);
   return {
-    min: Number(first.min),
-    median: Number(first.median),
-    p10: Number(first.p10),
-    p90: Number(first.p90),
-    max: Number(first.max),
+    min,
+    median: mean,
+    p10: min + 0.1 * range,
+    p90: min + 0.9 * range,
+    max,
   };
 }
 
@@ -442,8 +439,27 @@ export async function searchPricesWithMeta(query: string, state: string = '', zi
 
   // No generic baseline fallback: better to return no result than unrelated procedures.
 
-  const total = finalSql ? await countForQuery(w, finalSql, finalParams) : results.length;
-  const market = finalSql ? await marketForQuery(w, finalSql, finalParams) : null;
+  let total: number;
+  let market: SearchResponse['market'] = null;
+  if (!finalSql) {
+    total = results.length;
+  } else if (results.length === 0) {
+    total = 0;
+  } else {
+    const fullPage = results.length === limit;
+    if (fullPage) {
+      const [c, m] = await Promise.all([
+        countForQuery(w, finalSql, finalParams),
+        marketForQuery(w, finalSql, finalParams),
+      ]);
+      total = c;
+      market = m;
+    } else {
+      total = offset + results.length;
+      market = await marketForQuery(w, finalSql, finalParams);
+    }
+  }
+
   const response: SearchResponse = {
     rows: results,
     total,
@@ -452,6 +468,10 @@ export async function searchPricesWithMeta(query: string, state: string = '', zi
     dataQualityIssue: withAttributionConfidence ? null : 'missing_attribution_confidence_relaxed',
     market,
   };
+  if (cache.size >= MAX_SEARCH_CACHE) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
   cache.set(cacheKey, response);
   return response;
 }

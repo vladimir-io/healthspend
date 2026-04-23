@@ -42,7 +42,7 @@ async function openWorker(dbUrl: string, chunkSize: number) {
   };
 }
 
-export async function getSharedWorker(dbUrl: string, chunkSize: number = 65536) {
+export async function getSharedWorker(dbUrl: string, chunkSize: number = 262144) {
   const key = `${DB_VFS_ADAPTER}:${dbUrl}:${chunkSize}`;
   if (!pool.has(key)) {
     pool.set(key, await openWorker(dbUrl, chunkSize));

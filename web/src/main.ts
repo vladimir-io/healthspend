@@ -107,23 +107,26 @@ const btnGmail = document.getElementById('btn-gmail') as HTMLAnchorElement;
 const btnOutlook = document.getElementById('btn-outlook') as HTMLAnchorElement;
 
 let debounceTimer: any;
+let recsDebounceTimer: any;
 
 input.addEventListener('input', () => {
     clearTimeout(debounceTimer);
     const query = input.value;
     const state = stateSelect.value;
-    
-    // Autocomplete
-    const recs = getRecommendations(query);
-    if (recs.length > 0) {
+
+    clearTimeout(recsDebounceTimer);
+    recsDebounceTimer = setTimeout(() => {
+      const recs = getRecommendations(input.value);
+      if (recs.length > 0) {
         renderRecommendations(recs);
         recommendationEl.classList.remove('hidden');
-    } else {
+      } else {
         recommendationEl.classList.add('hidden');
-    }
+      }
+    }, 100);
 
     if (query.length > 2) {
-        debounceTimer = setTimeout(() => performSearch(query, state), 300);
+        debounceTimer = setTimeout(() => performSearch(query, state), 280);
     } else {
       setSearchLoading(false);
       contextBanner.classList.add('hidden');
