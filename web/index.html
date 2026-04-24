@@ -619,11 +619,22 @@
       <button id="btn-close-dispute" class="icon-btn"
         style="position:absolute;top:20px;right:20px;font-size:1.1rem;">✕</button>
       <div style="margin-bottom:12px;">
-        <p class="modal-eyebrow" style="margin-bottom:4px; font-size:0.7rem;">Rate Dispute Letter &nbsp;·&nbsp; Patient
-          Rights</p>
-        <h2 class="modal-title" style="font-size:1.4rem; margin:0;">Cash Rate Reduction Demand</h2>
+        <p class="modal-eyebrow" style="margin-bottom:4px; font-size:0.7rem;">Posted cash rate &nbsp;·&nbsp; Email helper</p>
+        <h2 class="modal-title" style="font-size:1.4rem; margin:0;">Use this published rate</h2>
+        <p style="font-size:0.75rem;color:var(--text-secondary);margin:8px 0 0;line-height:1.45;">Pick what matches you. The draft updates. CMS filing and audit depth stay in Facility Audit and Incident flows.</p>
       </div>
       <div class="modal-divider"></div>
+      <fieldset style="border:none;margin:0 0 14px;padding:0;">
+        <legend style="font-size:0.68rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Your situation</legend>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;font-size:0.82rem;">
+          <input type="radio" name="dispute-intent" id="dispute-intent-shopping" value="price_shopping" checked style="margin-top:3px;" />
+          <span>I am comparing prices or booking care (estimate or confirmation before I owe)</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;">
+          <input type="radio" name="dispute-intent" id="dispute-intent-billed" value="bill_above_posted" style="margin-top:3px;" />
+          <span>I already have a bill and the charge is above this published cash rate</span>
+        </label>
+      </fieldset>
       <div class="document-paper" style="flex:1;min-height:56vh;margin-bottom:12px;">
         <textarea id="dispute-draft" spellcheck="false" style="min-height:50vh;"></textarea>
       </div>
@@ -637,14 +648,12 @@
       <div class="modal-divider"></div>
       <div class="regulatory-grid">
         <div class="regulatory-panel">
-          <p class="regulatory-panel-title">Step 1 — Send to Billing</p>
-          <p>This letter cites the hospital's own publicly attested price. Billing departments cannot legally contradict
-            their own federally disclosed rate.</p>
+          <p class="regulatory-panel-title">Before you send</p>
+          <p>Replace the placeholder address with the billing or patient estimates contact from your paperwork or the hospital website. This tool is for shopping and billing questions, not enforcement.</p>
         </div>
         <div class="regulatory-panel">
-          <p class="regulatory-panel-title">Step 2 — Escalate if Needed</p>
-          <p>If the billing department rejects your first demand, escalate directly to the Facility Compliance Officer
-            or file a CMS complaint from the Incident Log.</p>
+          <p class="regulatory-panel-title">Filing and enforcement</p>
+          <p>Use Full Audit on each result card and the Incident log when you want to report transparency or data quality issues to CMS. That path stays separate from this letter.</p>
         </div>
       </div>
     </div>

@@ -35,34 +35,45 @@ export function isEngineReady(): boolean {
     return engineCache !== null;
 }
 
+export type ClaimLetterIntent = 'price_shopping' | 'bill_above_posted';
+
 export async function generateLetter(
     hospitalName: string,
     cptCode: string,
     price: number,
     description: string,
-    timeoutMs: number = 8000
+    timeoutMs: number = 8000,
+    intent: ClaimLetterIntent = 'price_shopping'
 ): Promise<string> {
     const formattedPrice = price.toFixed(2);
 
-    const deterministicFallback = `To the Billing Department at ${hospitalName},
+    const deterministicShopping = `To the Billing and Patient Financial Services team at ${hospitalName},
 
-I am writing to formally dispute the charges on my recent medical bill concerning CPT Code ${cptCode} (${description}).
+I am price shopping before scheduling care. Your published transparency data lists a cash price of $${formattedPrice} for CPT ${cptCode} (${description}).
 
-Your hospital's officially published Machine-Readable File (MRF) strictly lists the cash price for this procedure at $${formattedPrice}. I am demanding that my outstanding balance be immediately adjusted to match this legally mandated, publicly available cash price.
+Please confirm whether that rate applies to my situation and how I can obtain a written advance estimate so my bill can align with the published amount.
 
-If this adjustment is not made, I will escalate this matter to the state attorney general and the relevant consumer financial protection bureaus for predatory billing practices. I expect a revised, finalized bill reflecting the $${formattedPrice} total within 15 days.
+Thank you.`;
 
-Govern yourselves accordingly.`;
+    const deterministicBilled = `To the Billing Department at ${hospitalName},
+
+I received a bill for CPT ${cptCode} (${description}). Your published transparency data lists a cash price of $${formattedPrice}.
+
+The amount I was charged exceeds that published cash rate. Please provide a written explanation or adjust my balance if the published rate applies.
+
+Thank you.`;
+
+    const deterministicFallback =
+        intent === 'bill_above_posted' ? deterministicBilled : deterministicShopping;
 
     if (!engineCache || isGenerating) {
         return deterministicFallback;
     }
 
-    const DISPUTE_RESOLUTION_TEMPLATE = `Write a short, firm and legally assertive formal medical debt settlement letter to ${hospitalName}. 
-    I am being billed for CPT code ${cptCode} (${description}). 
-    According to your published Machine-Readable File, your cash price is $${formattedPrice}. 
-    I demand my bill be adjusted to this exact cash price immediately. 
-    Keep it concise, legally authoritative, under 150 words. Do not include placeholders.`;
+    const DISPUTE_RESOLUTION_TEMPLATE =
+        intent === 'price_shopping'
+            ? `Write a short, polite letter to ${hospitalName}. The reader is comparing hospitals before booking. Published cash price is $${formattedPrice} for CPT ${cptCode} (${description}). They want a written estimate and confirmation of when charges could differ. Under 150 words. No placeholders. No threats.`
+            : `Write a short, professional letter to ${hospitalName}. The reader already received a bill above the published cash price of $${formattedPrice} for CPT ${cptCode} (${description}). They request itemization or adjustment. Under 150 words. No placeholders. No threats.`;
 
     isGenerating = true;
 

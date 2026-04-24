@@ -1,5 +1,10 @@
 import { searchPricesWithMeta, getRecommendations } from './db';
 import { NPI_CONFIDENCE_THRESHOLD } from './config';
+import {
+  billingPlaceholderEmail,
+  buildClaimRateDraft,
+  type ClaimRateIntent,
+} from './claim_rate_letter.js';
 
 const SEARCH_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
 const SEARCH_PAGE_SIZE = 100;
@@ -669,8 +674,8 @@ function renderResults(results: any[]) {
         const price    = (row.cash_price ?? 0).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
         const scoreCol = score > 80 ? 'var(--rh-green)' : score > 50 ? 'var(--amber)' : 'var(--yc-orange)';
       const auditText = hasAttestedAudit
-        ? '§ 180.50 : Federally Attested Cash Standard'
-        : 'Reported cash rate only · transparency attestation unavailable';
+        ? 'Published cash line item (hospital transparency filing)'
+        : 'Cash rate from filing · full attestation in Audit Index';
         const attributionConfidence = Math.round(((row.attribution_confidence ?? 1) as number) * 100);
         const confidenceTone = attributionConfidence >= 95 ? 'high' : attributionConfidence >= 85 ? 'mid' : 'low';
         const minNegotiated = Number(row.min_negotiated);
@@ -756,7 +761,8 @@ function renderResults(results: any[]) {
                 </div>
 
                 <div class="result-actions-col">
-                    <button class="btn primary btn-dispute" style="width:100%;">Claim Rate</button>
+                    <button class="btn primary btn-dispute" style="width:100%;">Use this rate</button>
+                    <p class="result-price-label" style="margin-top:6px;text-align:center;font-size:0.62rem;opacity:0.85;">Email template for estimates or billing questions</p>
                 </div>
             </div>
         `;
@@ -837,46 +843,59 @@ Sincerely,
         if (overlay) overlay.classList.remove('hidden');
 };
 
+let lastDisputeRow: any = null;
+
+function getDisputeIntent(): ClaimRateIntent {
+  const el = document.querySelector(
+    'input[name="dispute-intent"]:checked'
+  ) as HTMLInputElement | null;
+  return el?.value === 'bill_above_posted' ? 'bill_above_posted' : 'price_shopping';
+}
+
+function syncDisputeMailLinks() {
+  if (!lastDisputeRow) return;
+  const draft = document.getElementById('dispute-draft') as HTMLTextAreaElement | null;
+  const btnDGmail = document.getElementById('btn-dispute-gmail') as HTMLAnchorElement | null;
+  const btnDOutlook = document.getElementById('btn-dispute-outlook') as HTMLAnchorElement | null;
+  const body = draft?.value ?? '';
+  const { subject } = buildClaimRateDraft(lastDisputeRow, getDisputeIntent());
+  const to = billingPlaceholderEmail(lastDisputeRow.hospital_name || '');
+  if (btnDGmail) btnDGmail.href = generateGmailLink({ to, subject, body });
+  if (btnDOutlook) btnDOutlook.href = generateOutlookLink({ to, subject, body });
+}
+
+function applyDisputeDraft(row: any) {
+  const disputeDraft = document.getElementById('dispute-draft') as HTMLTextAreaElement | null;
+  const { body } = buildClaimRateDraft(row, getDisputeIntent());
+  if (disputeDraft) disputeDraft.value = body;
+  syncDisputeMailLinks();
+}
+
 const handleDispute = (row: any) => {
-    const disputeOverlay = document.getElementById('dispute-overlay') as HTMLDivElement;
-    const disputeDraft = document.getElementById('dispute-draft') as HTMLTextAreaElement;
-    const btnDClip = document.getElementById('btn-dispute-copy') as HTMLButtonElement;
-    const btnDGmail = document.getElementById('btn-dispute-gmail') as HTMLAnchorElement;
-    const btnDOutlook = document.getElementById('btn-dispute-outlook') as HTMLAnchorElement;
+  lastDisputeRow = row;
+  const disputeOverlay = document.getElementById('dispute-overlay') as HTMLDivElement;
+  const disputeDraft = document.getElementById('dispute-draft') as HTMLTextAreaElement;
+  const btnDClip = document.getElementById('btn-dispute-copy') as HTMLButtonElement;
+  const shopping = document.getElementById('dispute-intent-shopping') as HTMLInputElement | null;
+  if (shopping) shopping.checked = true;
 
-    const priceHtml = row.cash_price.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
-    const letter = `Dear Billing Department,
+  applyDisputeDraft(row);
 
-I am writing to formally dispute the charges on my recent bill for ${row.description}. 
+  if (btnDClip) {
+    btnDClip.onclick = () => {
+      const text = disputeDraft?.value ?? '';
+      copyToClipboard(text);
+      const oldTxt = btnDClip.innerText;
+      btnDClip.innerText = 'COPIED ✓';
+      btnDClip.style.background = 'var(--rh-green)';
+      setTimeout(() => {
+        btnDClip.innerText = oldTxt;
+        btnDClip.style.background = '';
+      }, 2000);
+    };
+  }
 
-According to your facility's publicly available Machine-Readable File (MRF) as required by federal law (under the ${new Date().getFullYear()} CMS Final Rule), the attested Cash Rate for this procedure at ${row.hospital_name} is ${priceHtml}. 
-
-I was billed a higher rate. Because this cash rate is a publicly attested price point disclosed for consumer transparency, I demand that my bill be adjusted to reflect this rate immediately.
-
-Sincerely,
-[Your Name]`;
-
-    if (disputeDraft) disputeDraft.value = letter;
-    const subject = `Billing Dispute: ${row.hospital_name} (Cash Rate Parity)`;
-    const to = "billing@" + row.hospital_name.toLowerCase().replace(/\s+/g, '') + ".com";
-    
-    if (btnDGmail) btnDGmail.href = generateGmailLink({ to, subject, body: letter });
-    if (btnDOutlook) btnDOutlook.href = generateOutlookLink({ to, subject, body: letter });
-
-    if (btnDClip) {
-        btnDClip.onclick = () => {
-            copyToClipboard(letter);
-            const oldTxt = btnDClip.innerText;
-            btnDClip.innerText = "COPIED ✓";
-            btnDClip.style.background = "var(--rh-green)";
-            setTimeout(() => {
-                btnDClip.innerText = oldTxt;
-                btnDClip.style.background = "";
-            }, 2000);
-        };
-    }
-
-    if (disputeOverlay) disputeOverlay.classList.remove('hidden');
+  if (disputeOverlay) disputeOverlay.classList.remove('hidden');
 };
 
 const closeOverlays = () => {
@@ -889,6 +908,16 @@ btnCloseLetter.addEventListener('click', closeOverlays);
 document.getElementById('btn-cancel-letter')?.addEventListener('click', closeOverlays);
 document.getElementById('btn-close-dispute')?.addEventListener('click', closeOverlays);
 document.getElementById('btn-cancel-dispute')?.addEventListener('click', closeOverlays);
+
+document.getElementById('dispute-overlay')?.addEventListener('change', (ev) => {
+  const t = ev.target as HTMLInputElement | null;
+  if (!t || t.name !== 'dispute-intent' || !lastDisputeRow) return;
+  applyDisputeDraft(lastDisputeRow);
+});
+
+document.getElementById('dispute-draft')?.addEventListener('input', () => {
+  syncDisputeMailLinks();
+});
 
 btnCopy.addEventListener('click', () => {
     copyToClipboard(letterDraft.value);
