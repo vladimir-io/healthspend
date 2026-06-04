@@ -24,6 +24,12 @@ function copyToClipboard(text: string) {
   void navigator.clipboard.writeText(text);
 }
 
+function disputeRecipientEmail(): string {
+  const custom = (document.getElementById('dispute-to-email') as HTMLInputElement | null)?.value?.trim();
+  if (custom) return custom;
+  return billingPlaceholderEmail(String(lastDisputeRow?.hospital_name || ''));
+}
+
 function syncDisputeMailLinks() {
   if (!lastDisputeRow) return;
   const draft = document.getElementById('dispute-draft') as HTMLTextAreaElement | null;
@@ -31,7 +37,7 @@ function syncDisputeMailLinks() {
   const btnDOutlook = document.getElementById('btn-dispute-outlook') as HTMLAnchorElement | null;
   const body = draft?.value ?? '';
   const { subject } = buildClaimRateDraft(lastDisputeRow as Parameters<typeof buildClaimRateDraft>[0], getDisputeIntent());
-  const to = billingPlaceholderEmail(String(lastDisputeRow.hospital_name || ''));
+  const to = disputeRecipientEmail();
   if (btnDGmail) btnDGmail.href = generateGmailLink({ to, subject, body });
   if (btnDOutlook) btnDOutlook.href = generateOutlookLink({ to, subject, body });
 }
@@ -49,6 +55,11 @@ export function handleDispute(row: Record<string, unknown>) {
   const disputeDraft = document.getElementById('dispute-draft') as HTMLTextAreaElement;
   const btnDClip = document.getElementById('btn-dispute-copy') as HTMLButtonElement;
   const shopping = document.getElementById('dispute-intent-shopping') as HTMLInputElement | null;
+  const toField = document.getElementById('dispute-to-email') as HTMLInputElement | null;
+  if (toField) {
+    toField.value = '';
+    toField.placeholder = `e.g. billing@${billingPlaceholderEmail(String(row.hospital_name || '')).split('@')[1] || 'hospital.org'}`;
+  }
   if (shopping) shopping.checked = true;
   applyDisputeDraft(row);
 
@@ -117,6 +128,7 @@ export function setupOverlays(): void {
   });
 
   document.getElementById('dispute-draft')?.addEventListener('input', () => syncDisputeMailLinks());
+  document.getElementById('dispute-to-email')?.addEventListener('input', () => syncDisputeMailLinks());
 
   btnCopy?.addEventListener('click', () => {
     copyToClipboard(letterDraft?.value ?? '');

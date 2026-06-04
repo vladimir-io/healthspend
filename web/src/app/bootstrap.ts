@@ -6,8 +6,11 @@ import { setupCptPanel } from './cpt_panel';
 import { setupOverlays } from './overlays';
 import { setupMicroInteractions } from './micro';
 import { setupOnboarding } from './onboarding';
+import { setupDatabaseStatusBanner } from './db_status';
 import { setupRouting } from './routing';
+import { applyUrlParamsOnLoad } from './url_params';
 import { performSearch } from './search_controller';
+import { navigateToHospitalIssues } from './url_params';
 import { setupDynamicYear, setupThemeToggle } from './theme';
 
 export async function bootstrap(): Promise<void> {
@@ -25,6 +28,8 @@ export async function bootstrap(): Promise<void> {
   setupCptPanel();
   setupRouting();
   setupOnboarding();
+  setupDatabaseStatusBanner();
+  applyUrlParamsOnLoad();
 
   const input = document.getElementById('search-input');
   input?.addEventListener('focus', () => prefetchDatabase(), { once: false });
@@ -45,7 +50,7 @@ export async function bootstrap(): Promise<void> {
       const intent = (btn as HTMLElement).dataset.heroIntent;
       if (intent) sessionStorage.setItem('hs_hero_intent', intent);
       if (intent === 'cms') {
-        window.location.hash = '#incidents';
+        navigateToHospitalIssues();
         return;
       }
       window.location.hash = '#search';
@@ -65,11 +70,8 @@ export async function bootstrap(): Promise<void> {
     });
   });
 
-  const { renderScorecard } = await import('../views/scorecard');
-  await renderScorecard('view-scorecard');
-
-  const { renderIncidents } = await import('../views/incidents');
-  await renderIncidents('view-incidents');
+  const { renderHospitals } = await import('../views/hospitals');
+  await renderHospitals('view-hospitals');
 
   await renderMethodology('view-methodology');
 }

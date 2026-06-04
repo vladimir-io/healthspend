@@ -82,8 +82,8 @@
 :root[data-theme='light'] {
   color-scheme: light;
 
-  --bg-body: #f4f4f7;
-  --bg-deep: #eeeff3;
+  --bg-body: #f8f8fb;
+  --bg-deep: #f0f1f5;
   --bg-card: #ffffff;
   --bg-card-2: #f5f5f8;
   --bg-card-hover: #ebebef;

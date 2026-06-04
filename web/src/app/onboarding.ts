@@ -10,7 +10,7 @@ const STEPS: Step[] = [
   {
     target: '.hero-journey',
     title: 'Pick your situation',
-    body: 'Compare prices before care, challenge a bill above the posted cash rate, or explore transparency violations.',
+    body: 'Compare prices before care, challenge a bill above the posted rate, or report broken hospital price files.',
   },
   {
     target: '#search-input',

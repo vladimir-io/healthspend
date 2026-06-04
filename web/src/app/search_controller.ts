@@ -2,6 +2,7 @@ import { enrichSearchStats, getRecommendations, searchPricesWithMeta } from '../
 import { NPI_CONFIDENCE_THRESHOLD } from '../config';
 import { recordRum } from '../rum';
 import { FALLBACK_LABELS, formatResultsSummary } from './copy';
+import { buildSearchShareUrl } from './url_params';
 import { handleDispute, handleDraft } from './overlays';
 
 export const SEARCH_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
@@ -256,6 +257,20 @@ export async function performSearch(query: string, state: string = '') {
 
             contextBanner.classList.remove('hidden');
             document.getElementById('search-welcome')?.classList.add('hidden');
+            const shareBtn = document.getElementById('btn-share-search');
+            if (shareBtn && currentSearchState.query.length >= 3) {
+              shareBtn.classList.remove('hidden');
+              shareBtn.onclick = async () => {
+                const url = buildSearchShareUrl(currentSearchState.query, currentSearchState.state);
+                try {
+                  await navigator.clipboard.writeText(url);
+                  shareBtn.textContent = 'Copied';
+                  window.setTimeout(() => { shareBtn.textContent = 'Share'; }, 2000);
+                } catch {
+                  shareBtn.textContent = 'Copy failed';
+                }
+              };
+            }
             const auditLabel = document.getElementById('results-audit-label');
             if (auditLabel) {
               let label = state ? `${state} prices` : 'National prices';
@@ -365,7 +380,7 @@ function renderResults(results: any[]) {
         const scoreCol = score > 80 ? 'var(--rh-green)' : score > 50 ? 'var(--amber)' : 'var(--yc-orange)';
       const auditText = hasAttestedAudit
         ? 'Published cash line item (hospital transparency filing)'
-        : 'Cash rate from filing · full attestation in Audit Index';
+        : 'Cash rate from filing · see hospital details for CMS signals';
         const attributionConfidence = Math.round(((row.attribution_confidence ?? 1) as number) * 100);
         const confidenceTone = attributionConfidence >= 95 ? 'high' : attributionConfidence >= 85 ? 'mid' : 'low';
         const minNegotiated = Number(row.min_negotiated);
@@ -442,7 +457,7 @@ function renderResults(results: any[]) {
                     <button type="button" class="btn btn-primary-lg btn-dispute">Use this rate</button>
                     <p class="cta-hint">Email template for estimates or billing questions</p>
                     <div class="result-secondary-actions">
-                      <button type="button" class="btn-ghost btn-audit-detail">Full audit</button>
+                      <button type="button" class="btn-ghost btn-audit-detail">Hospital details</button>
                       ${cmsSecondary}
                     </div>
                 </aside>

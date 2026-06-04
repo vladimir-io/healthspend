@@ -174,7 +174,7 @@ export async function showAuditDetail(record: ComplianceRecord) {
 
         <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:32px;">
             <div style="flex:1; padding-right:48px;">
-                <div class="modal-eyebrow" style="margin-bottom:8px; letter-spacing:0.1em;">CMS Audit Intelligence &nbsp;&middot;&nbsp; CCN ${detailRecord.ccn}</div>
+                <div class="modal-eyebrow" style="margin-bottom:8px; letter-spacing:0.1em;">Hospital transparency &nbsp;&middot;&nbsp; CCN ${detailRecord.ccn}</div>
                 <h2 class="modal-title" style="margin-bottom:6px; font-size:1.8rem; letter-spacing:-0.03em;">${detailRecord.name}</h2>
                 <div style="display:flex; align-items:center; gap:12px;">
                     <p class="modal-subtitle" style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-tertiary);">${detailRecord.city}, ${detailRecord.state}</p>
@@ -182,7 +182,7 @@ export async function showAuditDetail(record: ComplianceRecord) {
                 </div>
             </div>
             <div style="text-align:right; flex-shrink:0; background:var(--bg-card-2); padding:16px 20px; border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
-                <div style="font-family:var(--font-mono); font-size:0.62rem; color:var(--text-tertiary); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.1em;">Institutional Rank</div>
+                <div style="font-family:var(--font-mono); font-size:0.62rem; color:var(--text-tertiary); text-transform:uppercase; margin-bottom:6px; letter-spacing:0.1em;">Reporting score</div>
                 <div style="display:flex; align-items:baseline; justify-content:flex-end; gap:2px; margin-bottom:2px;">
                     <span style="font-size:2.2rem; font-weight:900; color:${scoreCol}; line-height:1; letter-spacing:-0.02em;">${detailRecord.score}</span>
                     <span style="font-size:0.9rem; font-weight:700; color:var(--text-tertiary);">/100</span>
@@ -193,7 +193,7 @@ export async function showAuditDetail(record: ComplianceRecord) {
 
         <div class="audit-grid" style="display:grid; grid-template-columns:1fr 280px; gap:40px; margin-bottom:40px;">
             <div class="audit-inset-panel">
-                <p style="font-size:0.68rem; font-weight:900; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-tertiary); margin-bottom:16px;">Forensic Audit Summary</p>
+                <p style="font-size:0.68rem; font-weight:900; text-transform:uppercase; letter-spacing:0.12em; color:var(--text-tertiary); margin-bottom:16px;">What this score means</p>
                 <p style="font-size:0.95rem; color:var(--text-primary); line-height:1.7; letter-spacing:0.01em;">${verdictDetail}</p>
                 <div style="margin-top:28px; display:flex; gap:32px;">
                     <div>
@@ -214,8 +214,8 @@ export async function showAuditDetail(record: ComplianceRecord) {
 
         <div style="background:var(--bg-card); border:1px solid var(--border-medium); border-radius:var(--radius-xl); padding:32px; margin-bottom:40px; box-shadow:var(--shadow-card);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-                <p style="font-size:0.68rem; font-weight:900; text-transform:uppercase; letter-spacing:0.15em; color:var(--yc-orange);">Binary Compliance Thresholds</p>
-                <span class="tag ghost" style="font-size:0.6rem; color:var(--text-tertiary);">§ 45 CFR Part 180</span>
+                <p style="font-size:0.68rem; font-weight:900; text-transform:uppercase; letter-spacing:0.15em; color:var(--yc-orange);">CMS reporting checks</p>
+                <span class="tag ghost" style="font-size:0.6rem; color:var(--text-tertiary);">Provider Data Catalog</span>
             </div>
             <div class="compliance-inner-grid">
                 <div>${leftColHtml}</div>

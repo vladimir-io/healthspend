@@ -1,27 +1,57 @@
-/** Desktop tabs + mobile bottom bar + “More” menu. */
+/** Desktop tabs + mobile bottom bar + legacy hash redirects. */
 
-export type AppRoute = 'search' | 'scorecard' | 'incidents' | 'methodology' | 'mission';
+export type AppRoute = 'search' | 'hospitals' | 'methodology';
 
 const ROUTE_HASH: Record<AppRoute, string> = {
   search: '#search',
-  scorecard: '#scorecard',
-  incidents: '#incidents',
+  hospitals: '#hospitals',
   methodology: '#methodology',
-  mission: '#mission',
 };
 
 const HASH_TO_ROUTE: Record<string, AppRoute> = {
   '#search': 'search',
-  '#scorecard': 'scorecard',
-  '#incidents': 'incidents',
+  '#hospitals': 'hospitals',
   '#methodology': 'methodology',
-  '#mission': 'mission',
+  '#scorecard': 'hospitals',
+  '#incidents': 'hospitals',
+  '#mission': 'methodology',
 };
 
-const AUDIT_ROUTES: AppRoute[] = ['scorecard', 'incidents'];
+export type HospitalsTab = 'all' | 'failing';
+
+let hospitalsTab: HospitalsTab = 'all';
+
+export function getHospitalsTab(): HospitalsTab {
+  return hospitalsTab;
+}
+
+export function setHospitalsTab(tab: HospitalsTab): void {
+  hospitalsTab = tab;
+  window.dispatchEvent(new CustomEvent('hs:hospitals-tab', { detail: tab }));
+}
 
 export function routeFromHash(hash: string): AppRoute {
   return HASH_TO_ROUTE[hash] ?? 'search';
+}
+
+export function parseLegacyRoute(): { route: AppRoute; hospitalsTab?: HospitalsTab } {
+  const hash = window.location.hash || '#search';
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (hash === '#incidents' || tab === 'failing') {
+    return { route: 'hospitals', hospitalsTab: 'failing' };
+  }
+  if (hash === '#scorecard') {
+    return { route: 'hospitals', hospitalsTab: 'all' };
+  }
+  if (hash === '#mission') {
+    return { route: 'methodology' };
+  }
+  const route = routeFromHash(hash);
+  if (route === 'hospitals' && tab === 'failing') {
+    return { route, hospitalsTab: 'failing' };
+  }
+  return { route };
 }
 
 export function setupNavigation(onRouteChange?: (route: AppRoute) => void): void {
@@ -48,9 +78,8 @@ export function setupNavigation(onRouteChange?: (route: AppRoute) => void): void
   const setActiveUi = (route: AppRoute) => {
     const hash = ROUTE_HASH[route];
     document.querySelectorAll<HTMLElement>('[data-route]').forEach((el) => {
-      const r = el.dataset.route as AppRoute | 'audit' | undefined;
-      const active =
-        r === route || (r === 'audit' && AUDIT_ROUTES.includes(route));
+      const r = el.dataset.route as AppRoute | undefined;
+      const active = r === route;
       el.classList.toggle('is-active', !!active);
       if (el.classList.contains('nav-tab')) {
         el.classList.toggle('active', !!active);
@@ -66,7 +95,7 @@ export function setupNavigation(onRouteChange?: (route: AppRoute) => void): void
       v.classList.toggle('active', show);
     });
 
-    if (moreMenu && !['methodology', 'mission'].includes(route)) {
+    if (moreMenu && route !== 'methodology') {
       moreMenu.classList.add('hidden');
     }
 
@@ -74,12 +103,18 @@ export function setupNavigation(onRouteChange?: (route: AppRoute) => void): void
   };
 
   const onHashChange = () => {
+    const legacy = parseLegacyRoute();
+    if (legacy.hospitalsTab) setHospitalsTab(legacy.hospitalsTab);
     const hash = window.location.hash || '#search';
-    if (!HASH_TO_ROUTE[hash]) {
+    if (!HASH_TO_ROUTE[hash] && !['#scorecard', '#incidents', '#mission'].includes(hash)) {
       window.location.hash = '#search';
       return;
     }
-    setActiveUi(routeFromHash(hash));
+    if (['#scorecard', '#incidents', '#mission'].includes(hash)) {
+      window.location.replace(`${ROUTE_HASH[legacy.route]}${window.location.search}`);
+      return;
+    }
+    setActiveUi(legacy.route);
   };
 
   window.addEventListener('hashchange', onHashChange);
@@ -104,9 +139,25 @@ export function setupNavigation(onRouteChange?: (route: AppRoute) => void): void
     if (active) updateIndicator(active);
   });
 
-  onHashChange();
+  const legacy = parseLegacyRoute();
+  if (legacy.hospitalsTab) setHospitalsTab(legacy.hospitalsTab);
+  if (['#scorecard', '#incidents', '#mission'].includes(window.location.hash)) {
+    window.location.replace(`${ROUTE_HASH[legacy.route]}${window.location.search}`);
+  } else {
+    onHashChange();
+  }
 }
 
-export function navigateTo(route: AppRoute): void {
+export function navigateTo(route: AppRoute, opts?: { hospitalsTab?: HospitalsTab }): void {
+  if (opts?.hospitalsTab) {
+    setHospitalsTab(opts.hospitalsTab);
+    const url = new URL(window.location.href);
+    if (opts.hospitalsTab === 'failing') {
+      url.searchParams.set('tab', 'failing');
+    } else {
+      url.searchParams.delete('tab');
+    }
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${ROUTE_HASH[route]}`);
+  }
   window.location.hash = ROUTE_HASH[route];
 }

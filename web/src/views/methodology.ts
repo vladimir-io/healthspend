@@ -21,6 +21,7 @@ export async function renderMethodology(containerId: string): Promise<void> {
         <aside class="method-sidebar" aria-label="On this page">
           <nav class="method-toc">
             <p class="method-toc__label">On this page</p>
+            <a href="#method-why" class="method-toc__link">Why we built this</a>
             <a href="#method-sources" class="method-toc__link">Data sources</a>
             <a href="#method-score" class="method-toc__link">Audit index</a>
             <a href="#method-npi" class="method-toc__link">NPI confidence</a>
@@ -29,9 +30,23 @@ export async function renderMethodology(containerId: string): Promise<void> {
         </aside>
 
         <div class="method-main">
-          <section id="method-sources" class="method-section card-stagger" style="--card-i: 0">
+          <section id="method-why" class="method-section card-stagger" style="--card-i: 0">
             <div class="method-section__head">
               <span class="method-section__num" aria-hidden="true">01</span>
+              <div>
+                <h2>Why we built this</h2>
+                <p class="method-section__intro">Hospitals must publish machine-readable prices. Many files are still hard to use — and insured negotiated rates are often higher than cash.</p>
+              </div>
+            </div>
+            <div class="method-why-panel">
+              <p>The <a href="https://www.cms.gov/newsroom/fact-sheets/cy-2026-opps-ambulatory-surgical-center-final-rule-hospital-price-transparency-policy-changes" target="_blank" rel="noopener">2026 CMS transparency rule</a> requires real dollar amounts, valid NPIs, and attestations — not placeholder codes like <code>999999999</code>.</p>
+              <p>Healthspend lets you <strong>compare published cash rates</strong>, <strong>email hospitals</strong> with a specific posted price, and <strong>report broken filings</strong> to CMS when data is missing or unusable. We do not replace your EOB, billing department, or legal counsel.</p>
+            </div>
+          </section>
+
+          <section id="method-sources" class="method-section card-stagger" style="--card-i: 1">
+            <div class="method-section__head">
+              <span class="method-section__num" aria-hidden="true">02</span>
               <div>
                 <h2>Data sources</h2>
                 <p class="method-section__intro">Three public layers are merged nightly into our SQLite ledger.</p>
@@ -56,11 +71,11 @@ export async function renderMethodology(containerId: string): Promise<void> {
             </div>
           </section>
 
-          <section id="method-score" class="method-section card-stagger" style="--card-i: 1">
+          <section id="method-score" class="method-section card-stagger" style="--card-i: 2">
             <div class="method-section__head">
-              <span class="method-section__num" aria-hidden="true">02</span>
+              <span class="method-section__num" aria-hidden="true">03</span>
               <div>
-                <h2>Facility Audit Index (0–100)</h2>
+                <h2>Hospital transparency score (0–100)</h2>
                 <p class="method-section__intro">A single score per hospital blending CMS signals with deterministic file checks.</p>
               </div>
             </div>
@@ -84,9 +99,9 @@ export async function renderMethodology(containerId: string): Promise<void> {
             </div>
           </section>
 
-          <section id="method-npi" class="method-section card-stagger" style="--card-i: 2">
+          <section id="method-npi" class="method-section card-stagger" style="--card-i: 3">
             <div class="method-section__head">
-              <span class="method-section__num" aria-hidden="true">03</span>
+              <span class="method-section__num" aria-hidden="true">04</span>
               <div>
                 <h2>NPI confidence</h2>
                 <p class="method-section__intro">Search defaults to high-confidence attribution so you see prices that likely apply to the listed provider.</p>
@@ -105,9 +120,9 @@ export async function renderMethodology(containerId: string): Promise<void> {
             </div>
           </section>
 
-          <section id="method-verify" class="method-section method-section--accent card-stagger" style="--card-i: 3">
+          <section id="method-verify" class="method-section method-section--accent card-stagger" style="--card-i: 4">
             <div class="method-section__head">
-              <span class="method-section__num" aria-hidden="true">04</span>
+              <span class="method-section__num" aria-hidden="true">05</span>
               <div>
                 <h2>Verify before you pay</h2>
                 <p class="method-section__intro">Healthspend is research and education — not legal, medical, or billing advice.</p>
@@ -132,7 +147,7 @@ export async function renderMethodology(containerId: string): Promise<void> {
                 <span class="method-step__index">3</span>
                 <div>
                   <strong>Cross-check the facility</strong>
-                  <p>Use <a href="${CMS_COMPARE}" target="_blank" rel="noopener">Medicare Care Compare</a> and the live MRF link in Full Audit.</p>
+                  <p>Use <a href="${CMS_COMPARE}" target="_blank" rel="noopener">Medicare Care Compare</a> and the transparency URL in hospital details.</p>
                 </div>
               </li>
             </ol>
