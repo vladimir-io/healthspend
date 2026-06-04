@@ -12,6 +12,10 @@ from pathlib import Path
 
 import requests
 
+HOSPITALS_CSV_URL = (
+    "https://data.cms.gov/provider-data/sites/default/files/resources/"
+    "893c372430d9d71a1c52737d01239d47_1770163599/Hospital_General_Information.csv"
+)
 ENROLLMENTS_URL = (
     "https://data.cms.gov/sites/default/files/2026-05/"
     "4c668d34-e45a-4b9e-b5f7-dec7f1c333e1/Hospital_Enrollments_2026.05.01.csv"
@@ -98,6 +102,9 @@ def main() -> int:
 
     enrollments = out_dir / "hospital_enrollments.csv"
     download(ENROLLMENTS_URL, enrollments)
+
+    hospitals_csv = Path("hospitals.csv")
+    download(HOSPITALS_CSV_URL, hospitals_csv)
 
     if args.with_nppes:
         zip_path = out_dir / "nppes_dissemination.zip"

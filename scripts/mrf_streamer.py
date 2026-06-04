@@ -73,7 +73,10 @@ def resolve_mrf_url(mrf_url: str, cms_hpt_url: str, website: str) -> str:
         if not candidate:
             continue
         lowered = candidate.lower()
-        if any(ext in lowered for ext in [".json", ".csv", ".json.gz", ".csv.gz", ".zip"]):
+        if any(
+            ext in lowered
+            for ext in [".json", ".csv", ".json.gz", ".csv.gz", ".zip", ".ashx"]
+        ):
             if lowered.startswith("http://") or lowered.startswith("https://"):
                 return candidate
             if website:
@@ -97,6 +100,8 @@ def infer_extension(url: str) -> str:
         return ".txt"
     if path.endswith(".zip"):
         return ".zip"
+    if path.endswith(".ashx"):
+        return ".ashx"
     return ".json"
 
 
@@ -259,7 +264,12 @@ def main() -> int:
     print(
         f"done attempted={attempted} ingested={ingested} skipped={skipped} failed={failed} mrf_dir={mrf_dir}"
     )
-    return 0 if failed == 0 else 2
+    # Partial hospital network failures are expected; only fail when nothing succeeded.
+    if ingested > 0:
+        return 0
+    if failed > 0 and skipped == 0:
+        return 2
+    return 0
 
 
 if __name__ == "__main__":

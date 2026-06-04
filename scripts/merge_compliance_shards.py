@@ -84,8 +84,16 @@ def merge_shards(shard_paths: list[Path], out_path: Path) -> None:
 
         main.execute(
             """
-            INSERT OR REPLACE INTO compliance
-            SELECT * FROM shard.compliance
+            INSERT OR REPLACE INTO compliance (
+                ccn, score, txt_exists, robots_ok,
+                mrf_reachable, mrf_valid, mrf_fresh, shoppable_exists,
+                mrf_machine_readable, waf_blocked, last_checked, evidence_json
+            )
+            SELECT
+                ccn, score, txt_exists, robots_ok,
+                mrf_reachable, mrf_valid, mrf_fresh, shoppable_exists,
+                mrf_machine_readable, waf_blocked, last_checked, evidence_json
+            FROM shard.compliance
             """
         )
         main.execute("DETACH DATABASE shard")

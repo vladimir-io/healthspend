@@ -4,9 +4,14 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 import sys
 from pathlib import Path
+
+MIN_HOSPITALS = int(os.environ.get("HS_VERIFY_MIN_HOSPITALS", "5000"))
+MIN_PRICES = int(os.environ.get("HS_VERIFY_MIN_PRICES", "10000"))
+MIN_CPTS = int(os.environ.get("HS_VERIFY_MIN_CPTS", "20"))
 
 # Must stay in sync with scripts/build_hot_db.py
 HOT_CPTS = (
@@ -40,13 +45,17 @@ def verify_full_db(path: Path) -> list[str]:
     hospital_rows = conn.execute("SELECT COUNT(*) FROM hospitals").fetchone()[0]
     cpts = _cpt_set(conn)
 
-    if hospital_rows < 5_000:
-        errors.append(f"{path.name}: expected hospital registry, got {hospital_rows:,} rows")
-    if price_rows < 10_000:
-        errors.append(f"{path.name}: expected price ledger, got {price_rows:,} rows")
-    if len(cpts) < 20:
+    if hospital_rows < MIN_HOSPITALS:
         errors.append(
-            f"{path.name}: expected broad CPT coverage (20+), got {len(cpts)} — "
+            f"{path.name}: expected ≥{MIN_HOSPITALS:,} hospitals, got {hospital_rows:,}"
+        )
+    if price_rows < MIN_PRICES:
+        errors.append(
+            f"{path.name}: expected ≥{MIN_PRICES:,} price rows, got {price_rows:,}"
+        )
+    if len(cpts) < MIN_CPTS:
+        errors.append(
+            f"{path.name}: expected ≥{MIN_CPTS} CPTs, got {len(cpts)} — "
             "run build_public_db.sh or CI MRF ingest with HS_FULL_CPT_COVERAGE=1"
         )
 

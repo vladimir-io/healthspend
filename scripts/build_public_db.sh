@@ -15,6 +15,12 @@ python3 ingest.py
 echo "==> Discovery inputs (CMS enrollments crosswalk)"
 python3 scripts/fetch_discovery_inputs.py
 
+INDEX="${MRF_INDEX:-data/mrf_url_index.sqlite}"
+if [[ ! -f "$INDEX" ]]; then
+  echo "==> Build MRF URL index (health-system cms-hpt harvest)"
+  python3 scripts/build_mrf_index.py --out "$INDEX"
+fi
+
 if [[ -x "$(command -v cargo)" ]]; then
   echo "==> Scraper discovery + audit${STATE:+ ($STATE)}"
   (
@@ -28,7 +34,10 @@ if [[ -x "$(command -v cargo)" ]]; then
     fi
   )
 
-  echo "==> Domain/cms-hpt enrichment${STATE:+ ($STATE)}"
+  echo "==> Apply MRF URL index"
+  python3 scripts/apply_mrf_index.py --index "$INDEX" ${STATE:+--state "$STATE"}
+
+  echo "==> Domain/cms-hpt enrichment (fallback)${STATE:+ ($STATE)}"
   ENRICH_ARGS=(python3 scripts/enrich_hospital_urls.py --compliance-db scraper/compliance.db)
   if [[ -n "$STATE" ]]; then
     ENRICH_ARGS+=(--state "$STATE")

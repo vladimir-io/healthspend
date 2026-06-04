@@ -11,6 +11,7 @@ import argparse
 import csv
 import re
 import sqlite3
+import sys
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -155,8 +156,12 @@ def main() -> int:
 
     enrollments = Path(args.enrollments)
     if not enrollments.exists():
-        print(f"Missing {enrollments}; run scripts/fetch_discovery_inputs.py first")
-        return 1
+        print(
+            f"warn: missing {enrollments} — skipping enrichment "
+            "(run scripts/fetch_discovery_inputs.py first)",
+            file=sys.stderr,
+        )
+        return 0
 
     org_by_ccn = load_enrollment_names(enrollments)
     conn = sqlite3.connect(args.compliance_db)
@@ -204,7 +209,11 @@ def main() -> int:
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
         futures = {pool.submit(work, item): item[0] for item in todo}
         for fut in as_completed(futures):
-            result = fut.result()
+            try:
+                result = fut.result()
+            except Exception as exc:
+                print(f"warn probe ccn={futures[fut]}: {exc}", file=sys.stderr)
+                continue
             if not result:
                 continue
             ccn, website, cms_hpt, mrf = result
