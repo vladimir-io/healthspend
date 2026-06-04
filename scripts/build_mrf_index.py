@@ -14,19 +14,21 @@ import csv
 import re
 import sqlite3
 import sys
+import http.client
 import urllib.error
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from cms_hpt_utils import (
-    CmsHptLocation,
     HospitalRow,
-    match_ccn,
     normalize_name,
     parse_cms_hpt_locations,
     website_from_mrf_url,
 )
+from hospital_match_index import HospitalMatchIndex
 
 USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -66,17 +68,20 @@ def load_hospitals(path: Path) -> list[HospitalRow]:
     return rows
 
 
-def load_roots(path: Path) -> list[str]:
+def load_roots(paths: list[Path]) -> list[str]:
     hosts: list[str] = []
     seen: set[str] = set()
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.split("#", 1)[0].strip().lower()
-        if not line:
+    for path in paths:
+        if not path.exists():
             continue
-        line = line.replace("https://", "").replace("http://", "").strip("/")
-        if line and line not in seen:
-            seen.add(line)
-            hosts.append(line)
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.split("#", 1)[0].strip().lower()
+            if not line:
+                continue
+            line = line.replace("https://", "").replace("http://", "").strip("/")
+            if line and line not in seen:
+                seen.add(line)
+                hosts.append(line)
     return hosts
 
 
@@ -130,7 +135,13 @@ def harvest_root(host: str) -> tuple[str, list[CmsHptLocation]]:
             cms_url = f"{scheme}://{host}{path}"
             try:
                 body = fetch_text(cms_url)
-            except (urllib.error.URLError, TimeoutError, OSError):
+            except (
+                urllib.error.URLError,
+                http.client.HTTPException,
+                TimeoutError,
+                OSError,
+                ValueError,
+            ):
                 continue
             if "mrf-url" not in body.lower() and "standardcharge" not in body.lower():
                 continue
@@ -145,9 +156,15 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Build national MRF URL index")
     parser.add_argument("--hospitals-csv", default="hospitals.csv")
     parser.add_argument("--roots-file", default="data/health_system_roots.txt")
+    parser.add_argument(
+        "--extra-roots-file",
+        action="append",
+        default=[],
+        help="Additional host list files (e.g. data/discovery_roots_extra.txt)",
+    )
     parser.add_argument("--out", default="data/mrf_url_index.sqlite")
     parser.add_argument("--workers", type=int, default=24)
-    parser.add_argument("--min-match", type=float, default=0.82)
+    parser.add_argument("--min-match", type=float, default=0.80)
     args = parser.parse_args()
 
     hospitals_path = Path(args.hospitals_csv)
@@ -156,7 +173,14 @@ def main() -> int:
         return 1
 
     hospitals = load_hospitals(hospitals_path)
-    roots = load_roots(Path(args.roots_file))
+    match_index = HospitalMatchIndex.from_csv_rows(hospitals)
+    root_paths = [Path(args.roots_file)]
+    default_extra = Path("data/discovery_roots_extra.txt")
+    if default_extra.exists():
+        root_paths.append(default_extra)
+    for p in args.extra_roots_file:
+        root_paths.append(Path(p))
+    roots = load_roots(root_paths)
     print(f"Hospitals: {len(hospitals):,}  Roots: {len(roots):,}")
 
     out_path = Path(args.out)
@@ -168,15 +192,17 @@ def main() -> int:
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
         futures = {pool.submit(harvest_root, h): h for h in roots}
         for fut in as_completed(futures):
-            host, locs = fut.result()
+            try:
+                host, locs = fut.result()
+            except Exception as exc:
+                print(f"  warn harvest {futures[fut]}: {exc}", file=sys.stderr)
+                continue
             if not locs:
                 continue
             roots_hit += 1
             total_locs += len(locs)
             for loc in locs:
-                if not loc.location_name:
-                    continue
-                matched = match_ccn(loc.location_name, hospitals, args.min_match)
+                matched = match_index.resolve(loc, args.min_match)
                 if not matched:
                     continue
                 ccn, score = matched

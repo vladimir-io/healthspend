@@ -220,25 +220,48 @@ def merge_prices(conn: sqlite3.Connection, scraper_prices_db: str) -> int:
             )
             return 0
 
-        cur.execute("DELETE FROM prices")
-
-        cur.execute("""
-            INSERT INTO prices
-                (ein, cpt_code, description,
-                 cash_price, gross_charge,
-                 min_negotiated, max_negotiated,
-                 payer, plan,
-                 provider_npi, attribution_confidence)
-            SELECT
-                ccn, cpt_code, description,
-                cash_price, gross_charge,
-                min_negotiated, max_negotiated,
-                payer, plan,
-                provider_npi, attribution_confidence
-            FROM rust_prices.prices
-        """)
+        mode = os.environ.get("HS_PRICES_MERGE_MODE", "incremental").strip().lower()
+        if mode == "full":
+            cur.execute("DELETE FROM prices")
+            cur.execute("""
+                INSERT INTO prices
+                    (ein, cpt_code, description,
+                     cash_price, gross_charge,
+                     min_negotiated, max_negotiated,
+                     payer, plan,
+                     provider_npi, attribution_confidence)
+                SELECT
+                    ccn, cpt_code, description,
+                    cash_price, gross_charge,
+                    min_negotiated, max_negotiated,
+                    payer, plan,
+                    provider_npi, attribution_confidence
+                FROM rust_prices.prices
+            """)
+        else:
+            # Incremental: replace only CCNs present in scraper (10x faster than full wipe).
+            cur.execute("""
+                DELETE FROM prices
+                WHERE ein IN (SELECT DISTINCT ccn FROM rust_prices.prices)
+            """)
+            cur.execute("""
+                INSERT INTO prices
+                    (ein, cpt_code, description,
+                     cash_price, gross_charge,
+                     min_negotiated, max_negotiated,
+                     payer, plan,
+                     provider_npi, attribution_confidence)
+                SELECT
+                    ccn, cpt_code, description,
+                    cash_price, gross_charge,
+                    min_negotiated, max_negotiated,
+                    payer, plan,
+                    provider_npi, attribution_confidence
+                FROM rust_prices.prices
+            """)
         conn.commit()
         merged = cur.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
+        print(f"  merge mode={mode} (scraper rows={src_count:,})")
         return merged
     finally:
         conn.execute("DETACH DATABASE rust_prices")

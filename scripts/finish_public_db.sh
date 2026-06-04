@@ -7,6 +7,7 @@ cd "$ROOT"
 
 export HS_SKIP_FTS="${HS_SKIP_FTS:-1}"
 export HS_SKIP_VACUUM="${HS_SKIP_VACUUM:-1}"
+export HS_PRICES_MERGE_MODE="${HS_PRICES_MERGE_MODE:-incremental}"
 
 echo "==> Apply MRF index (if present)"
 if [[ -f data/mrf_url_index.sqlite ]]; then

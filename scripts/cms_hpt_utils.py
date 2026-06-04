@@ -17,6 +17,8 @@ class CmsHptLocation:
     source_page_url: str
     cms_hpt_url: str
     website: str
+    ccn_hint: str = ""
+    city_hint: str = ""
 
 
 @dataclass
@@ -67,6 +69,8 @@ def parse_cms_hpt_locations(body: str, cms_hpt_url: str, website: str) -> list[C
                 source_page_url=(current.get("source_page_url") or "").strip(),
                 cms_hpt_url=cms_hpt_url,
                 website=website,
+                ccn_hint=(current.get("ccn_hint") or "").strip(),
+                city_hint=(current.get("city_hint") or "").strip(),
             )
         )
 
@@ -89,6 +93,16 @@ def parse_cms_hpt_locations(body: str, cms_hpt_url: str, website: str) -> list[C
             if val.startswith("http"):
                 current["source_page_url"] = val
             continue
+        if lower.startswith(("facility-id:", "facility id:", "ccn:", "license-number:", "license number:")):
+            ccn = ccn_digits(line.split(":", 1)[1])
+            if ccn:
+                current["ccn_hint"] = ccn
+            continue
+        if lower.startswith("location-address:"):
+            city = extract_city_hint(line.split(":", 1)[1])
+            if city:
+                current["city_hint"] = city
+            continue
         if line.startswith("http") and any(m in lower for m in MRF_EXT_MARKERS):
             current.setdefault("mrf_url", line.split(",")[0].strip())
 
@@ -110,6 +124,31 @@ def parse_cms_hpt_locations(body: str, cms_hpt_url: str, website: str) -> list[C
                 break
 
     return out
+
+
+def ccn_digits(raw: str) -> str:
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) < 6:
+        return ""
+    if len(digits) > 6:
+        digits = digits[-6:]
+    return digits.zfill(6)
+
+
+def extract_city_hint(address: str) -> str:
+    """Best-effort city from cms-hpt address line."""
+    parts = [p.strip() for p in address.split(",") if p.strip()]
+    if len(parts) >= 2:
+        return normalize_name(parts[-2])
+    return ""
+
+
+def extract_ccn_from_text(text: str) -> str:
+    for match in re.findall(r"\b\d{6}\b", text or ""):
+        ccn = ccn_digits(match)
+        if ccn:
+            return ccn
+    return ""
 
 
 def name_score(a: str, b: str) -> float:
@@ -228,6 +267,58 @@ def match_ccn(
             if best_state != state_hint:
                 return None
 
+    return best_ccn, best
+
+
+def resolve_ccn_for_location(
+    loc: CmsHptLocation,
+    hospitals: list[HospitalRow],
+    hospitals_by_ccn: dict[str, HospitalRow],
+    min_score: float = 0.82,
+) -> tuple[str, float] | None:
+    """Prefer explicit facility-id / CCN in cms-hpt, then fuzzy name (+ optional city)."""
+    for hint in (loc.ccn_hint, extract_ccn_from_text(loc.location_name)):
+        if hint and hint in hospitals_by_ccn:
+            return hint, 0.99
+
+    if not loc.location_name:
+        return None
+
+    state_hint = extract_state_hint(loc.location_name)
+    city_hint = loc.city_hint or extract_city_hint(loc.location_name)
+    target = normalize_name(loc.location_name)
+    if not target:
+        return None
+
+    scored: list[tuple[float, str]] = []
+    for h in hospitals:
+        score = name_score(target, h.name_norm)
+        if city_hint and h.city:
+            city_norm = normalize_name(h.city)
+            if city_hint in city_norm or city_norm in city_hint:
+                score = min(0.99, score + 0.08)
+            elif city_hint and city_norm:
+                score *= 0.85
+        if state_hint:
+            if h.state == state_hint:
+                score = min(0.99, score + 0.06)
+            else:
+                score *= 0.72
+        scored.append((score, h.ccn))
+
+    scored.sort(reverse=True)
+    if not scored or scored[0][0] < min_score:
+        return None
+
+    best, best_ccn = scored[0]
+    if len(scored) > 1:
+        second, second_ccn = scored[1]
+        if second_ccn != best_ccn and (best - second) < 0.04:
+            if not state_hint:
+                return None
+            best_state = hospitals_by_ccn.get(best_ccn)
+            if not best_state or best_state.state != state_hint:
+                return None
     return best_ccn, best
 
 

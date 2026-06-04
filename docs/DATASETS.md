@@ -51,6 +51,18 @@ CMS does not publish one national file of hospital MRF links. The reliable appro
 
 Optional bulk parsed data: [Trilliant/Oria hospital price dataset](https://www.trillianthealth.com/product-blog/a-free-centralized-dataset-for-hospital-prices) (5k+ hospitals) if you need billions of rates without scraping every site yourself.
 
+## Grow URL coverage
+
+```bash
+# Index + apply only (fastest; no MRF download)
+SKIP_INGEST=1 ./scripts/grow_mrf_coverage.sh
+
+# Full pass: optional 1GB NPPES download for more probe hosts
+WITH_NPPES=1 SKIP_INGEST=0 ./scripts/grow_mrf_coverage.sh
+```
+
+Adds hosts from `data/health_system_roots.txt`, enrollment name guesses, and (optional) NPPES endpoint domains, then rebuilds `mrf_url_index.sqlite`.
+
 ## Build locally
 
 ```bash

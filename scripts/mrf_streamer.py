@@ -173,6 +173,11 @@ def main() -> int:
         help="Keep downloaded MRF files on disk",
     )
     parser.add_argument("--skip-existing", action="store_true")
+    parser.add_argument(
+        "--ccn-file",
+        default="",
+        help="Optional file with one CCN per line (restrict ingest queue)",
+    )
     args = parser.parse_args()
 
     repo = Path(__file__).resolve().parents[1]
@@ -216,6 +221,14 @@ def main() -> int:
             ).fetchall()
     finally:
         conn.close()
+
+    if args.ccn_file:
+        allow = {
+            line.strip()
+            for line in Path(args.ccn_file).read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+        rows = [r for r in rows if r[0] in allow]
 
     if args.limit and args.limit > 0:
         rows = rows[: args.limit]

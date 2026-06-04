@@ -26,6 +26,8 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
   HS_FULL_CPT_COVERAGE: '1'
+  HS_INGEST_ONLY: '1'
+  HS_PRICES_MERGE_MODE: incremental
 
 jobs:
   setup:
@@ -119,13 +121,6 @@ jobs:
           cargo build --release
           cd ..
 
-      - name: Run discovery for ${{ matrix.state }}
-        continue-on-error: true
-        run: |
-          cd scraper
-          cargo run --release --bin scraper -- --discover-only --state ${{ matrix.state }}
-          cd ..
-
       - uses: actions/download-artifact@v4
         continue-on-error: true
         with:
@@ -143,25 +138,12 @@ jobs:
             echo "No mrf-url-index artifact — run 'Build MRF URL Index' workflow first"
           fi
 
-      - name: Enrich hospital URLs for ${{ matrix.state }}
-        timeout-minutes: 45
-        continue-on-error: true
+      - name: Seed scraper hospitals for ${{ matrix.state }}
         run: |
-          python3 scripts/enrich_hospital_urls.py \
+          mkdir -p scraper
+          python3 scripts/seed_scraper_hospitals.py \
             --compliance-db scraper/compliance.db \
-            --state ${{ matrix.state }} \
-            --limit 500 \
-            --workers 12
-          sqlite3 scraper/compliance.db \
-            "SELECT COUNT(*) AS with_hpt FROM hospitals WHERE COALESCE(cms_hpt_url,'') != '' AND UPPER(state)=UPPER('${{ matrix.state }}');" \
-            "SELECT COUNT(*) AS with_mrf FROM hospitals WHERE COALESCE(mrf_url,'') != '' AND UPPER(state)=UPPER('${{ matrix.state }}');"
-
-      - name: Run audit for ${{ matrix.state }}
-        continue-on-error: true
-        run: |
-          cd scraper
-          cargo run --release --bin scraper -- --audit-only --state ${{ matrix.state }}
-          cd ..
+            --state ${{ matrix.state }}
 
       - name: Ingest MRF prices for ${{ matrix.state }}
         continue-on-error: true
@@ -268,6 +250,9 @@ jobs:
         run: python3 scripts/validate_database.py web/public/audit_data.db || true
 
       - name: Merge Pipeline Data
+        env:
+          HS_PRICES_MERGE_MODE: incremental
+          HS_SKIP_FTS: '1'
         run: |
           if [ ! -f scraper/prices.db ]; then
             echo "No merged scraper/prices.db — prices merge may have been skipped"
@@ -275,7 +260,13 @@ jobs:
           python3 scripts/merge_pipeline_data.py
 
       - name: Build hot database shard
+        env:
+          HS_SKIP_VACUUM: '1'
         run: python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db
+
+      - name: Prepare deploy artifacts
+        run: |
+          python3 scripts/prepare_deploy_artifacts.py --compress || python3 scripts/prepare_deploy_artifacts.py
 
       - name: Verify dataset artifacts
         id: verify
@@ -325,7 +316,7 @@ jobs:
         run: |
           if [ -n "$HF_TOKEN" ]; then
             pip install huggingface_hub
-            python3 scripts/deploy_huggingface.py --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db web/public/audit_hot.db web/public/dataset_manifest.json
+            python3 scripts/deploy_huggingface.py --prefer-compressed --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db web/public/audit_hot.db web/public/dataset_manifest.json
           else
             echo "HF_TOKEN not set, skipping deploy"
           fi

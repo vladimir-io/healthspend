@@ -38,6 +38,9 @@ mrf_temp/
 mrf_temp/**
 data/mrf_url_index.sqlite
 data/mrf_url_index.sqlite-*
+data/discovery_roots_extra.txt
+data/archive/
+data/discovery/nppes_dissemination.zip
 data/*.sqlite.tmp
 data/*.sqlite.bak
 

@@ -118,10 +118,15 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
 
     let mut hospitals_to_audit = Vec::new();
     {
+        let url_filter = " AND (COALESCE(cms_hpt_url, '') <> '' OR COALESCE(mrf_url, '') <> '')";
         let mut stmt = if state_filter.is_some() {
-            conn.prepare("SELECT ccn, website, cms_hpt_url FROM hospitals WHERE state = ?1")?
+            conn.prepare(&format!(
+                "SELECT ccn, website, cms_hpt_url FROM hospitals WHERE state = ?1{url_filter}"
+            ))?
         } else {
-            conn.prepare("SELECT ccn, website, cms_hpt_url FROM hospitals")?
+            conn.prepare(&format!(
+                "SELECT ccn, website, cms_hpt_url FROM hospitals WHERE 1=1{url_filter}"
+            ))?
         };
 
         let to_row = |row: &rusqlite::Row<'_>| -> rusqlite::Result<(String, String, String)> {

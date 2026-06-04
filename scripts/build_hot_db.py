@@ -50,36 +50,60 @@ def build_hot_db(source: Path, out: Path) -> dict:
     dst.execute(prices_row[0])
     dst.execute(f"INSERT INTO prices SELECT * FROM src.prices WHERE {cpt_predicate}", HOT_CPTS)
 
-    fts_row = src.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='prices_fts'"
-    ).fetchone()
-    if fts_row and fts_row[0]:
-        dst.execute(fts_row[0])
-        try:
-            dst.execute(
-                f"""
-                INSERT INTO prices_fts(rowid, description, cpt_code)
-                SELECT p.rowid, p.description, p.cpt_code
-                FROM prices p
-                WHERE p.{cpt_predicate}
-                """,
-                HOT_CPTS,
+    # Always build FTS on hot shard for fast browser search (small row count).
+    try:
+        dst.execute(
+            """
+            CREATE VIRTUAL TABLE IF NOT EXISTS prices_fts USING fts5(
+                description,
+                cpt_code,
+                content='prices',
+                content_rowid='rowid',
+                tokenize='unicode61'
             )
-        except sqlite3.Error:
-            pass
+            """
+        )
+        dst.execute("INSERT INTO prices_fts(prices_fts) VALUES('rebuild')")
+    except sqlite3.Error as e:
+        print(f"  (hot FTS build skipped: {e})")
 
-    hot_row = src.execute(
-        "SELECT sql FROM sqlite_master WHERE type='table' AND name='hot_price_compare'"
-    ).fetchone()
-    if hot_row and hot_row[0]:
-        dst.execute(hot_row[0])
-        try:
-            dst.execute(
-                f"INSERT INTO hot_price_compare SELECT * FROM src.hot_price_compare WHERE code IN ({placeholders})",
-                HOT_CPTS,
-            )
-        except sqlite3.Error:
-            pass
+    dst.execute(
+        """
+        CREATE TABLE IF NOT EXISTS hot_price_compare (
+            code TEXT PRIMARY KEY,
+            row_count INTEGER,
+            min_price REAL,
+            max_price REAL,
+            median_price REAL
+        )
+        """
+    )
+    for code in HOT_CPTS:
+        row = dst.execute(
+            """
+            SELECT COUNT(*), MIN(cash_price), MAX(cash_price)
+            FROM prices WHERE cpt_code = ? AND cash_price > 0
+            """,
+            (code,),
+        ).fetchone()
+        if not row or not row[0]:
+            continue
+        cnt, mn, mx = row
+        med = dst.execute(
+            """
+            SELECT cash_price FROM prices
+            WHERE cpt_code = ? AND cash_price > 0
+            ORDER BY cash_price LIMIT 1 OFFSET ?
+            """,
+            (code, max(0, cnt // 2)),
+        ).fetchone()
+        dst.execute(
+            """
+            INSERT OR REPLACE INTO hot_price_compare (code, row_count, min_price, max_price, median_price)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (code, cnt, mn, mx, med[0] if med else None),
+        )
 
     dst.execute("CREATE INDEX IF NOT EXISTS idx_hot_prices_cpt ON prices(cpt_code)")
     dst.execute("CREATE INDEX IF NOT EXISTS idx_hot_prices_ein ON prices(ein)")

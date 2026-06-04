@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-04T04:20:49.165400+00:00",
+  "generated_at": "2026-06-04T05:50:21.026012+00:00",
   "hot_cpt_codes": [
     "27447",
     "27130",
@@ -31,7 +31,7 @@
       "role": "top_cpt_hot_shard_for_client_search",
       "hot_cpt_filter_count": 16,
       "present": true,
-      "size_bytes": 13139968,
+      "size_bytes": 13148160,
       "price_rows": 296,
       "hospital_rows": 39937,
       "distinct_cpt_codes": 16

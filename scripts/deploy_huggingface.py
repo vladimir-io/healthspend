@@ -18,9 +18,22 @@ def main() -> int:
     parser.add_argument("--repo-id", required=True, help="Hugging Face repo ID (e.g., vladimir-io/healthspend-data)")
     parser.add_argument("--files", nargs="+", required=True, help="Artifact files to publish")
     parser.add_argument("--token", help="Hugging Face API token. If omitted, reads HF_TOKEN, HF, or HUGGINGFACE_CO_TOKEN from environment.")
+    parser.add_argument(
+        "--prefer-compressed",
+        action="store_true",
+        help="Upload .db.zst sibling when smaller than raw .db",
+    )
     args = parser.parse_args()
 
-    files = [Path(p) for p in args.files]
+    files: list[Path] = []
+    for p in args.files:
+        path = Path(p)
+        if args.prefer_compressed:
+            zst = path.with_suffix(path.suffix + ".zst")
+            if zst.is_file() and zst.stat().st_size < path.stat().st_size:
+                files.append(zst)
+                continue
+        files.append(path)
     for f in files:
         if not f.exists():
             raise SystemExit(f"Missing file: {f}")
