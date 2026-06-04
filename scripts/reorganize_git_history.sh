@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reorganize history into phase snapshots (non-interactive).
+# Reorganize history into milestone snapshots (non-interactive).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -14,19 +14,19 @@ fi
 echo "Source snapshot: $SOURCE"
 echo "Backup branch: $BACKUP"
 
-phases=(
-  "phase-1(foundation): initial open source release|2c334fe0"
-  "phase-2(web): search, claim-rate UX, and patient-facing UI|fe469d1d"
-  "phase-3(pipeline): hot shard, CI, audits, and dataset verification|aa078000"
-  "phase-4(data): discovery, MRF enrichment, and ingest fixes|adba5f77"
-  "phase-5(ci): national 50-state matrix and index-first MRF harvest|b75c83f7"
-  "phase-6(data): index matching, ingest throughput, and publish path|79828e02"
-  "phase-7(data): coverage growth, ROI pipeline, and disk stability|${SOURCE}"
+milestones=(
+  "foundation: initial open source release|2c334fe0"
+  "web: search, claim-rate UX, and patient-facing UI|fe469d1d"
+  "pipeline: hot shard, CI, audits, and dataset verification|aa078000"
+  "data: discovery, MRF enrichment, and ingest fixes|adba5f77"
+  "ci: national 50-state matrix and index-first MRF harvest|b75c83f7"
+  "data: index matching, ingest throughput, and publish path|79828e02"
+  "data: coverage growth, ROI pipeline, and disk stability|${SOURCE}"
 )
 
 git checkout -B main-reorg 2cc195fb
 
-for entry in "${phases[@]}"; do
+for entry in "${milestones[@]}"; do
   msg="${entry%%|*}"
   tip="${entry##*|}"
   echo "==> $msg @ ${tip:0:8}"
@@ -39,5 +39,5 @@ for entry in "${phases[@]}"; do
 done
 
 git branch -M main
-echo "✓ Reorganized into ${#phases[@]} phase commits on main"
+echo "✓ Reorganized into ${#milestones[@]} milestone commits on main"
 git log --oneline
