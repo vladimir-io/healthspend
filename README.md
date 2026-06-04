@@ -95,6 +95,7 @@ python3 ingest.py
 - Sources: CMS public data and hospital-published machine-readable files (MRFs).
 - Coverage varies by hospital, state, and file quality.
 - Missing procedures usually reflect data availability, not a search bug.
+- Artifact definitions and verification: [docs/DATASETS.md](docs/DATASETS.md)
 
 ## For developers
 
@@ -106,13 +107,18 @@ Patient UI lives at `/`. Static data access docs: `/developers.html`. Datasets a
 - **Data CI**: audit pipelines → Hugging Face snapshots
 - **Docs**: [docs/METHODOLOGY.md](docs/METHODOLOGY.md) · [docs/LEGAL.md](docs/LEGAL.md)
 
-### Hot database shard
+### Database shards
 
-Production search prefers `audit_hot.db` (top CPT codes), with fallback to `audit_data.db`:
+- **`audit_data.db`** — full published ledger (hospitals, compliance, all ingested prices).
+- **`audit_hot.db`** — same hospitals/compliance; `prices` filtered to 16 shortcut CPT codes for faster loads.
 
 ```bash
-python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db
+python3 scripts/build_hot_db.py
+python3 scripts/verify_dataset_artifacts.py
+python3 scripts/write_dataset_manifest.py
 ```
+
+Details: [docs/DATASETS.md](docs/DATASETS.md).
 
 ## Contributing
 

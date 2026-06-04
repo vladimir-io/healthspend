@@ -1,0 +1,40 @@
+{
+  "generated_at": "2026-06-01T06:03:17.592871+00:00",
+  "hot_cpt_codes": [
+    "27447",
+    "27130",
+    "70551",
+    "74177",
+    "71045",
+    "80053",
+    "45378",
+    "99283",
+    "99285",
+    "59400",
+    "12001",
+    "90686",
+    "96372",
+    "99213",
+    "90791",
+    "95810"
+  ],
+  "artifacts": {
+    "audit_data.db": {
+      "role": "full_price_and_compliance_ledger",
+      "present": true,
+      "size_bytes": 32894976,
+      "price_rows": 59133,
+      "hospital_rows": 39937,
+      "distinct_cpt_codes": 11
+    },
+    "audit_hot.db": {
+      "role": "top_cpt_hot_shard_for_client_search",
+      "hot_cpt_filter_count": 16,
+      "present": true,
+      "size_bytes": 24051712,
+      "price_rows": 59133,
+      "hospital_rows": 39937,
+      "distinct_cpt_codes": 11
+    }
+  }
+}

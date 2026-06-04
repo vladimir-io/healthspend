@@ -97,6 +97,8 @@ wrangler.toml
 !web/public/api/
 !web/public/visibility/
 !web/public/embed/
+!web/public/developers.html
+!web/public/dataset_manifest.json
 !scraper/data/test_*.json
 !scraper/data/test_*.csv
 
