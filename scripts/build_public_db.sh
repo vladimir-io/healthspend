@@ -47,7 +47,7 @@ if [[ -x "$(command -v cargo)" ]]; then
   fi
   "${ENRICH_ARGS[@]}" || true
 
-  MRF_DIR="${MRF_DIR:-/tmp/healthspend-mrf}"
+  MRF_DIR="${MRF_DIR:-$ROOT/mrf_temp/build}"
   mkdir -p "$MRF_DIR"
   echo "==> MRF download + ingest (HS_FULL_CPT_COVERAGE=$HS_FULL_CPT_COVERAGE)"
   MRF_ARGS=(
@@ -62,6 +62,7 @@ if [[ -x "$(command -v cargo)" ]]; then
   if [[ "$MRF_LIMIT" -gt 0 ]]; then
     MRF_ARGS+=(--limit "$MRF_LIMIT")
   fi
+  MRF_ARGS+=(--cleanup)
   "${MRF_ARGS[@]}"
 else
   echo "!! cargo not found — skipping MRF ingest; only CMS baseline will be present"

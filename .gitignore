@@ -35,6 +35,11 @@ venv/
 *.db-wal
 scraper/*.db*
 mrf_temp/
+mrf_temp/**
+data/mrf_url_index.sqlite
+data/mrf_url_index.sqlite-*
+data/*.sqlite.tmp
+data/*.sqlite.bak
 
 # ── Large data files ─────────────────────────────────────────────────────────
 *.csv

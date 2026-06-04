@@ -4,9 +4,19 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sqlite3
 import sys
 from pathlib import Path
+
+
+def normalize_ccn(ccn: str) -> str:
+    digits = re.sub(r"\D", "", ccn or "")
+    if not digits:
+        return ""
+    if len(digits) > 6:
+        digits = digits[-6:]
+    return digits.zfill(6)
 
 
 def main() -> int:
@@ -14,7 +24,7 @@ def main() -> int:
     parser.add_argument("--index", default="data/mrf_url_index.sqlite")
     parser.add_argument("--compliance-db", default="scraper/compliance.db")
     parser.add_argument("--state", default="", help="Optional state filter")
-    parser.add_argument("--min-confidence", type=float, default=0.75)
+    parser.add_argument("--min-confidence", type=float, default=0.65)
     args = parser.parse_args()
 
     index_path = Path(args.index)
@@ -29,22 +39,48 @@ def main() -> int:
     idx = sqlite3.connect(index_path)
     comp = sqlite3.connect(comp_path)
 
+    state_ccns: list[str] | None = None
+    if args.state:
+        state_ccns = [
+            r[0]
+            for r in comp.execute(
+                "SELECT ccn FROM hospitals WHERE UPPER(state) = UPPER(?)",
+                (args.state,),
+            ).fetchall()
+        ]
+
+    # Pick the highest-confidence mrf_url per CCN (plain GROUP BY would pick arbitrary URLs).
     sql = """
-        SELECT ccn, mrf_url, cms_hpt_url, website, MAX(confidence) AS confidence
-        FROM mrf_urls
-        WHERE confidence >= ?
+        WITH ranked AS (
+            SELECT ccn, mrf_url, cms_hpt_url, website, confidence,
+                   ROW_NUMBER() OVER (
+                       PARTITION BY ccn ORDER BY confidence DESC, length(mrf_url) DESC
+                   ) AS rn
+            FROM mrf_urls
+            WHERE confidence >= ? AND COALESCE(mrf_url, '') <> ''
+        )
+        SELECT ccn, mrf_url, cms_hpt_url, website, confidence
+        FROM ranked
+        WHERE rn = 1
     """
     params: list = [args.min_confidence]
-    if args.state:
-        sql += " AND ccn IN (SELECT ccn FROM hospitals WHERE UPPER(state) = UPPER(?))"
-        params.append(args.state)
-    sql += " GROUP BY ccn"
-
-    rows = idx.execute(sql, params).fetchall()
+    if state_ccns is not None:
+        if not state_ccns:
+            rows = []
+        else:
+            placeholders = ",".join("?" * len(state_ccns))
+            sql = f"SELECT * FROM ({sql}) WHERE ccn IN ({placeholders})"
+            params.extend(state_ccns)
+            rows = idx.execute(sql, params).fetchall()
+    else:
+        rows = idx.execute(sql, params).fetchall()
     idx.close()
 
     updated = 0
     for ccn, mrf_url, cms_hpt_url, website, _conf in rows:
+        ccn = normalize_ccn(ccn)
+        if len(ccn) != 6:
+            continue
         cur = comp.execute(
             """
             UPDATE hospitals SET

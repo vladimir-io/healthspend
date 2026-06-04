@@ -54,7 +54,7 @@ def apply_search_optimizations(conn: sqlite3.Connection) -> None:
     has_prices = cur.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='prices'"
     ).fetchone()
-    if has_prices:
+    if has_prices and os.environ.get("HS_SKIP_FTS", "").strip() not in ("1", "true", "yes"):
         try:
             cur.execute(
                 """
@@ -69,6 +69,8 @@ def apply_search_optimizations(conn: sqlite3.Connection) -> None:
             cur.execute("INSERT INTO prices_fts(prices_fts) VALUES('rebuild')")
         except sqlite3.OperationalError as e:
             print(f"  (FTS5 build skipped: {e})")
+    elif has_prices:
+        print("  (FTS5 rebuild skipped: HS_SKIP_FTS=1)")
     try:
         cur.execute("ANALYZE")
     except sqlite3.OperationalError:

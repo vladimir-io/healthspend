@@ -78,31 +78,53 @@ fn main() -> anyhow::Result<()> {
         .map(|s| s.to_ascii_lowercase())
         .unwrap_or_default();
 
-    let (records_inserted, mrf_machine_readable) = match ext.as_str() {
-        "json" => {
-            let result = parser_json::parse_json_streaming_with_dbs(
-                &args.file,
-                &args.ccn,
-                &args.prices_db,
-                &args.compliance_db,
-            );
-            (result.records_inserted, result.mrf_machine_readable)
-        }
-        "csv" | "txt" => {
-            let result = parser_csv::parse_csv_tall_with_dbs(
-                &args.file,
-                &args.ccn,
-                &args.prices_db,
-                &args.compliance_db,
-            );
-            (result.records_inserted, result.mrf_machine_readable)
-        }
-        _ => {
-            anyhow::bail!(
-                "Unsupported MRF extension for {}. Supported: .json, .csv, .txt",
-                args.file
-            );
-        }
+    let sniff = {
+        use std::io::Read;
+        let mut buf = [0u8; 4096];
+        let mut file = std::fs::File::open(&args.file).ok();
+        let n = file
+            .as_mut()
+            .and_then(|f| f.read(&mut buf).ok())
+            .unwrap_or(0);
+        buf[..n]
+            .iter()
+            .copied()
+            .find(|b| !b.is_ascii_whitespace())
+            .unwrap_or(0)
+    };
+
+    let parse_as_json = ext == "json" || sniff == b'{' || sniff == b'[';
+    let parse_as_csv = ext == "csv" || ext == "txt" || sniff == b',';
+
+    let (records_inserted, mrf_machine_readable) = if parse_as_json && !parse_as_csv {
+        let result = parser_json::parse_json_streaming_with_dbs(
+            &args.file,
+            &args.ccn,
+            &args.prices_db,
+            &args.compliance_db,
+        );
+        (result.records_inserted, result.mrf_machine_readable)
+    } else if parse_as_csv || ext == "ashx" {
+        let result = parser_csv::parse_csv_tall_with_dbs(
+            &args.file,
+            &args.ccn,
+            &args.prices_db,
+            &args.compliance_db,
+        );
+        (result.records_inserted, result.mrf_machine_readable)
+    } else if sniff == b'{' || sniff == b'[' {
+        let result = parser_json::parse_json_streaming_with_dbs(
+            &args.file,
+            &args.ccn,
+            &args.prices_db,
+            &args.compliance_db,
+        );
+        (result.records_inserted, result.mrf_machine_readable)
+    } else {
+        anyhow::bail!(
+            "Unsupported MRF extension for {}. Supported: .json, .csv, .txt, .ashx",
+            args.file
+        );
     };
 
     update_parse_result(

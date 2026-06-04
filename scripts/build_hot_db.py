@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
@@ -83,8 +84,12 @@ def build_hot_db(source: Path, out: Path) -> dict:
     dst.execute("CREATE INDEX IF NOT EXISTS idx_hot_prices_cpt ON prices(cpt_code)")
     dst.execute("CREATE INDEX IF NOT EXISTS idx_hot_prices_ein ON prices(ein)")
     dst.commit()
-    dst.execute("VACUUM")
-    dst.commit()
+    if os.environ.get("HS_SKIP_VACUUM", "").strip() not in ("1", "true", "yes"):
+        try:
+            dst.execute("VACUUM")
+            dst.commit()
+        except sqlite3.OperationalError as e:
+            print(f"  (VACUUM skipped: {e})")
     src.close()
     dst.close()
 

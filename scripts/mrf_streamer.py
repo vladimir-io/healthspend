@@ -160,7 +160,18 @@ def main() -> int:
     parser.add_argument("--state", default="")
     parser.add_argument("--threads", type=int, default=4, help="Worker hint; ingest remains single-writer for SQLite consistency")
     parser.add_argument("--limit", type=int, default=0)
-    parser.add_argument("--cleanup", action="store_true", help="Delete each raw MRF after ingest")
+    parser.add_argument(
+        "--cleanup",
+        action="store_true",
+        default=True,
+        help="Delete each raw MRF after ingest (default: on)",
+    )
+    parser.add_argument(
+        "--no-cleanup",
+        action="store_false",
+        dest="cleanup",
+        help="Keep downloaded MRF files on disk",
+    )
     parser.add_argument("--skip-existing", action="store_true")
     args = parser.parse_args()
 
@@ -179,12 +190,17 @@ def main() -> int:
                   CASE WHEN COALESCE(cms_hpt_url, '') != '' THEN 0 ELSE 1 END,
                   ccn
                 """
+        url_filter = """
+                WHERE COALESCE(mrf_url, '') <> ''
+                   OR COALESCE(cms_hpt_url, '') <> ''
+        """
         if args.state:
             rows = cur.execute(
                 f"""
                 SELECT ccn, COALESCE(mrf_url, ''), COALESCE(cms_hpt_url, ''), COALESCE(website, '')
                 FROM hospitals
-                WHERE UPPER(state) = UPPER(?)
+                {url_filter}
+                  AND UPPER(state) = UPPER(?)
                 {order}
                 """,
                 (args.state,),
@@ -194,6 +210,7 @@ def main() -> int:
                 f"""
                 SELECT ccn, COALESCE(mrf_url, ''), COALESCE(cms_hpt_url, ''), COALESCE(website, '')
                 FROM hospitals
+                {url_filter}
                 {order}
                 """
             ).fetchall()

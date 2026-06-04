@@ -120,26 +120,115 @@ def name_score(a: str, b: str) -> float:
     return SequenceMatcher(None, a, b).ratio()
 
 
+# US state hints in cms-hpt location-name lines (e.g. "Memorial Hermann, TX")
+_STATE_NAME_TO_ABBR = {
+    "alabama": "AL",
+    "alaska": "AK",
+    "arizona": "AZ",
+    "arkansas": "AR",
+    "california": "CA",
+    "colorado": "CO",
+    "connecticut": "CT",
+    "delaware": "DE",
+    "florida": "FL",
+    "georgia": "GA",
+    "hawaii": "HI",
+    "idaho": "ID",
+    "illinois": "IL",
+    "indiana": "IN",
+    "iowa": "IA",
+    "kansas": "KS",
+    "kentucky": "KY",
+    "louisiana": "LA",
+    "maine": "ME",
+    "maryland": "MD",
+    "massachusetts": "MA",
+    "michigan": "MI",
+    "minnesota": "MN",
+    "mississippi": "MS",
+    "missouri": "MO",
+    "montana": "MT",
+    "nebraska": "NE",
+    "nevada": "NV",
+    "new hampshire": "NH",
+    "new jersey": "NJ",
+    "new mexico": "NM",
+    "new york": "NY",
+    "north carolina": "NC",
+    "north dakota": "ND",
+    "ohio": "OH",
+    "oklahoma": "OK",
+    "oregon": "OR",
+    "pennsylvania": "PA",
+    "rhode island": "RI",
+    "south carolina": "SC",
+    "south dakota": "SD",
+    "tennessee": "TN",
+    "texas": "TX",
+    "utah": "UT",
+    "vermont": "VT",
+    "virginia": "VA",
+    "washington": "WA",
+    "west virginia": "WV",
+    "wisconsin": "WI",
+    "wyoming": "WY",
+    "district of columbia": "DC",
+}
+_VALID_STATE_ABBRS = set(_STATE_NAME_TO_ABBR.values())
+
+
+def extract_state_hint(location_name: str) -> str:
+    raw = location_name.strip()
+    if not raw:
+        return ""
+    m = re.search(r",\s*([A-Za-z]{2})\s*(?:\d{5})?\s*$", raw)
+    if m and m.group(1).upper() in _VALID_STATE_ABBRS:
+        return m.group(1).upper()
+    low = raw.lower()
+    for name, abbr in sorted(_STATE_NAME_TO_ABBR.items(), key=lambda x: -len(x[0])):
+        if re.search(rf"\b{re.escape(name)}\b", low):
+            return abbr
+    return ""
+
+
 def match_ccn(
     location_name: str,
     hospitals: list[HospitalRow],
-    min_score: float = 0.86,
+    min_score: float = 0.82,
 ) -> tuple[str, float] | None:
     target = normalize_name(location_name)
     if not target:
         return None
 
-    best_ccn = ""
-    best = 0.0
+    state_hint = extract_state_hint(location_name)
+    scored: list[tuple[float, str]] = []
     for h in hospitals:
         score = name_score(target, h.name_norm)
-        if score > best:
-            best = score
-            best_ccn = h.ccn
+        if state_hint:
+            if h.state == state_hint:
+                score = min(0.99, score + 0.06)
+            else:
+                score *= 0.72
+        scored.append((score, h.ccn))
 
-    if best >= min_score and best_ccn:
-        return best_ccn, best
-    return None
+    scored.sort(reverse=True)
+    if not scored:
+        return None
+
+    best, best_ccn = scored[0]
+    if best < min_score:
+        return None
+
+    if len(scored) > 1:
+        second, second_ccn = scored[1]
+        if second_ccn != best_ccn and (best - second) < 0.04:
+            if not state_hint:
+                return None
+            best_state = next((h.state for h in hospitals if h.ccn == best_ccn), "")
+            if best_state != state_hint:
+                return None
+
+    return best_ccn, best
 
 
 def website_from_mrf_url(url: str) -> str:

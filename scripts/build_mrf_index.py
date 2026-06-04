@@ -81,10 +81,13 @@ def load_roots(path: Path) -> list[str]:
 
 
 def init_index_db(path: Path) -> sqlite3.Connection:
+    """Open a temp DB; caller must finalize_index_db() to atomically replace path."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists():
-        path.unlink()
-    conn = sqlite3.connect(path)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    if tmp.exists():
+        tmp.unlink()
+    conn = sqlite3.connect(tmp)
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(
         """
         CREATE TABLE mrf_urls (
@@ -101,7 +104,24 @@ def init_index_db(path: Path) -> sqlite3.Connection:
     )
     conn.execute("CREATE INDEX idx_mrf_urls_ccn ON mrf_urls(ccn)")
     conn.commit()
-    return conn
+    return conn, tmp
+
+
+def finalize_index_db(path: Path, tmp: Path, conn: sqlite3.Connection) -> None:
+    """Atomically promote tmp → path so a failed build never wipes a good index."""
+    conn.commit()
+    conn.close()
+    if not tmp.exists() or tmp.stat().st_size == 0:
+        tmp.unlink(missing_ok=True)
+        raise RuntimeError(f"Index build produced no data at {tmp}")
+    backup = path.with_suffix(path.suffix + ".bak")
+    if path.exists():
+        if backup.exists():
+            backup.unlink()
+        path.replace(backup)
+    tmp.replace(path)
+    if backup.exists():
+        backup.unlink()
 
 
 def harvest_root(host: str) -> tuple[str, list[CmsHptLocation]]:
@@ -127,7 +147,7 @@ def main() -> int:
     parser.add_argument("--roots-file", default="data/health_system_roots.txt")
     parser.add_argument("--out", default="data/mrf_url_index.sqlite")
     parser.add_argument("--workers", type=int, default=24)
-    parser.add_argument("--min-match", type=float, default=0.86)
+    parser.add_argument("--min-match", type=float, default=0.82)
     args = parser.parse_args()
 
     hospitals_path = Path(args.hospitals_csv)
@@ -139,7 +159,8 @@ def main() -> int:
     roots = load_roots(Path(args.roots_file))
     print(f"Hospitals: {len(hospitals):,}  Roots: {len(roots):,}")
 
-    conn = init_index_db(Path(args.out))
+    out_path = Path(args.out)
+    conn, tmp_path = init_index_db(out_path)
     total_locs = 0
     total_inserted = 0
     roots_hit = 0
@@ -161,6 +182,12 @@ def main() -> int:
                 ccn, score = matched
                 website = loc.website or website_from_mrf_url(loc.mrf_url)
                 confidence = min(0.99, 0.55 + score * 0.45)
+                existing = conn.execute(
+                    "SELECT confidence FROM mrf_urls WHERE ccn = ? AND mrf_url = ?",
+                    (ccn, loc.mrf_url),
+                ).fetchone()
+                if existing and existing[0] >= confidence:
+                    continue
                 conn.execute(
                     """
                     INSERT OR REPLACE INTO mrf_urls
@@ -181,16 +208,25 @@ def main() -> int:
                 conn.commit()
                 print(f"  {host}: +{len(locs)} blocks, indexed so far={total_inserted:,}")
 
-    conn.commit()
     ccn_count = conn.execute("SELECT COUNT(DISTINCT ccn) FROM mrf_urls").fetchone()[0]
     row_count = conn.execute("SELECT COUNT(*) FROM mrf_urls").fetchone()[0]
-    conn.close()
+    if ccn_count == 0:
+        conn.close()
+        tmp_path.unlink(missing_ok=True)
+        print("✗ Index build found no hospitals", file=sys.stderr)
+        return 1
+
+    try:
+        finalize_index_db(out_path, tmp_path, conn)
+    except OSError as e:
+        print(f"✗ Failed to write index: {e}", file=sys.stderr)
+        return 1
 
     print(
         f"✓ Index {args.out}: {row_count:,} mrf rows, {ccn_count:,} hospitals "
         f"({roots_hit}/{len(roots)} roots with cms-hpt, {total_locs:,} location blocks)"
     )
-    return 0 if ccn_count > 0 else 1
+    return 0
 
 
 if __name__ == "__main__":
