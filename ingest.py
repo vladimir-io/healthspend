@@ -222,10 +222,8 @@ def ingest_to_sqlite(quality_index: dict):
             ems           = row.get("Emergency Services", "No").strip()
             ownership     = row.get("Hospital Ownership", "").strip()
             overall_rating = row.get("Hospital overall rating", "Not Available").strip()
-            website = (
-                "https://www.google.com/search?q="
-                + name.replace(" ", "+") + "+" + city + "+" + state + "+price+transparency"
-            )
+            # Real websites come from scraper discovery (NPPES / cms-hpt probes), not search URLs.
+            website = ""
 
             quality = quality_index.get(ccn)
             score   = compute_score(row, quality)
@@ -239,7 +237,13 @@ def ingest_to_sqlite(quality_index: dict):
                 ON CONFLICT(ccn) DO UPDATE SET
                     name=excluded.name, address=excluded.address, city=excluded.city,
                     state=excluded.state, zip_code=excluded.zip_code, phone=excluded.phone,
-                    type=excluded.type, website=excluded.website, ems=excluded.ems,
+                    type=excluded.type,
+                    website=CASE
+                        WHEN excluded.website IS NOT NULL AND excluded.website <> ''
+                        THEN excluded.website
+                        ELSE hospitals.website
+                    END,
+                    ems=excluded.ems,
                     overall_rating=excluded.overall_rating, ownership=excluded.ownership
             """, (ccn, name, address, city, state, zip_code, phone, hospital_type,
                   website, ems, overall_rating, ownership))

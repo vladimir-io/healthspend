@@ -371,9 +371,16 @@ fn load_existing_hospital_state(conn: &Connection) -> anyhow::Result<HashMap<Str
     Ok(map)
 }
 
+fn is_placeholder_website(raw: &str) -> bool {
+    let lower = raw.to_ascii_lowercase();
+    lower.contains("google.com/search")
+        || lower.contains("duckduckgo.com")
+        || lower.contains("bing.com/search")
+}
+
 fn normalize_website(raw: &str) -> String {
     let trimmed = raw.trim();
-    if trimmed.is_empty() {
+    if trimmed.is_empty() || is_placeholder_website(trimmed) {
         return String::new();
     }
 
@@ -606,12 +613,30 @@ fn enrich_urls(client: &Client, website: &str, existing_cms_hpt: &str, existing_
     (cms_hpt_url, mrf_url)
 }
 
+fn optional_existing_file(candidates: &[&str]) -> Option<String> {
+    candidates
+        .iter()
+        .map(|p| resolve_input_path(p))
+        .find(|p| p.exists())
+        .map(|p| p.to_string_lossy().to_string())
+}
+
 pub fn run_discovery(state_filter: Option<String>) -> anyhow::Result<()> {
     run_discovery_with_options(DiscoveryOptions {
         state_filter,
         seed_file: "hospitals.csv".to_string(),
-        nppes_endpoints_file: None,
-        ccn_npi_crosswalk_file: None,
+        nppes_endpoints_file: optional_existing_file(&[
+            "../data/discovery/nppes_endpoints_subset.csv",
+            "data/discovery/nppes_endpoints_subset.csv",
+            "../data/discovery/nppes_endpoints.csv",
+            "data/discovery/nppes_endpoints.csv",
+        ]),
+        ccn_npi_crosswalk_file: optional_existing_file(&[
+            "../data/discovery/hospital_enrollments.csv",
+            "data/discovery/hospital_enrollments.csv",
+            "../data/master2026/hospital_enrollments_2026.csv",
+            "data/master2026/hospital_enrollments_2026.csv",
+        ]),
         nppes_core_file: None,
         fuzzy_match_nppes: false,
     })

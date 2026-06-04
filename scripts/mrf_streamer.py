@@ -53,9 +53,17 @@ def resolve_mrf_url(mrf_url: str, cms_hpt_url: str, website: str) -> str:
 
     for line in body.splitlines():
         line = line.strip()
-        if not line or line.startswith("#"):
+        if not line or line.startswith("#") or line.startswith("*"):
             continue
-        if "standard" in line.lower() or "machine" in line.lower() or line.startswith("http"):
+        lower = line.lower()
+        if lower.startswith("mrf-url:"):
+            val = line.split(":", 1)[1].strip()
+            if val.startswith("http"):
+                candidates.append(val)
+            continue
+        if lower.startswith("source-page-url:"):
+            continue
+        if "standard" in lower or "machine" in lower or line.startswith("http"):
             candidates.append(line.split(",")[0].strip())
 
     for match in URL_PATTERN.findall(body):
@@ -160,22 +168,28 @@ def main() -> int:
     conn = sqlite3.connect(compliance_db)
     try:
         cur = conn.cursor()
+        order = """
+                ORDER BY
+                  CASE WHEN COALESCE(mrf_url, '') != '' THEN 0 ELSE 1 END,
+                  CASE WHEN COALESCE(cms_hpt_url, '') != '' THEN 0 ELSE 1 END,
+                  ccn
+                """
         if args.state:
             rows = cur.execute(
-                """
+                f"""
                 SELECT ccn, COALESCE(mrf_url, ''), COALESCE(cms_hpt_url, ''), COALESCE(website, '')
                 FROM hospitals
                 WHERE UPPER(state) = UPPER(?)
-                ORDER BY ccn
+                {order}
                 """,
                 (args.state,),
             ).fetchall()
         else:
             rows = cur.execute(
-                """
+                f"""
                 SELECT ccn, COALESCE(mrf_url, ''), COALESCE(cms_hpt_url, ''), COALESCE(website, '')
                 FROM hospitals
-                ORDER BY ccn
+                {order}
                 """
             ).fetchall()
     finally:

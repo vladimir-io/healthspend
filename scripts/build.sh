@@ -47,6 +47,11 @@ if [ -n "$STATE" ]; then
     log_warning "Running with state filter: $STATE"
 fi
 
+log_step "Phase 0: Fetch discovery inputs (CMS enrollments)..."
+if ! python3 "$SCRIPTS_DIR/fetch_discovery_inputs.py"; then
+    log_warning "Discovery input fetch failed (continuing)"
+fi
+
 # Phase 1: Discover hospitals
 log_step "Phase 1: Discover hospitals${STATE_FLAG}..."
 cd "$SCRAPER_DIR"
@@ -66,6 +71,18 @@ fi
 cd ..
 log_success "Hospital discovery complete"
 
+log_step "Phase 1b: Enrich hospital domains (cms-hpt probe)..."
+ENRICH_ARGS=(python3 "$SCRIPTS_DIR/enrich_hospital_urls.py" --compliance-db "$SCRAPER_DIR/compliance.db")
+if [ -n "$STATE" ]; then
+    ENRICH_ARGS+=(--state "$STATE")
+fi
+if [ -n "${MRF_LIMIT:-}" ] && [ "$MRF_LIMIT" -gt 0 ] 2>/dev/null; then
+    ENRICH_ARGS+=(--limit "$((MRF_LIMIT * 4))")
+fi
+if ! "${ENRICH_ARGS[@]}"; then
+    log_warning "URL enrichment had failures (continuing)"
+fi
+
 # Phase 2: Audit hospital compliance
 log_step "Phase 2: Audit hospital compliance..."
 cd "$SCRAPER_DIR"
@@ -81,24 +98,23 @@ fi
 cd ..
 log_success "Hospital audit complete"
 
-# Phase 3: Parse MRF data
-log_step "Phase 3: Parse MRF data..."
-cd "$SCRAPER_DIR"
+# Phase 3: Download and ingest MRF data (all CPT codes when HS_FULL_CPT_COVERAGE=1)
+export HS_FULL_CPT_COVERAGE="${HS_FULL_CPT_COVERAGE:-1}"
+MRF_DIR="${MRF_DIR:-/tmp/healthspend-mrf-build}"
+mkdir -p "$MRF_DIR"
+log_step "Phase 3: MRF stream ingest (full CPT coverage)..."
+MRF_ARGS=(python3 "$SCRIPTS_DIR/mrf_streamer.py" --prices-db "$SCRAPER_DIR/prices.db" --compliance-db "$SCRAPER_DIR/compliance.db" --mrf-dir "$MRF_DIR")
 if [ -n "$STATE" ]; then
-    if ! cargo run --release -- --parse_only --state "$STATE"; then
-        log_error "Parse phase failed"
-        cd ..
-        exit 1
-    fi
-else
-    if ! cargo run --release -- --parse_only; then
-        log_error "Parse phase failed"
-        cd ..
-        exit 1
-    fi
+    MRF_ARGS+=(--state "$STATE")
 fi
-cd ..
-log_success "MRF parsing complete"
+if [ -n "${MRF_LIMIT:-}" ] && [ "$MRF_LIMIT" -gt 0 ] 2>/dev/null; then
+    MRF_ARGS+=(--limit "$MRF_LIMIT")
+fi
+if ! "${MRF_ARGS[@]}"; then
+    log_error "MRF ingest phase failed"
+    exit 1
+fi
+log_success "MRF ingest complete"
 
 # Phase 4: Validate intermediate databases
 log_step "Phase 4: Validating intermediate databases..."
@@ -151,6 +167,13 @@ if ! python3 ingest.py; then
     exit 1
 fi
 log_success "Compliance ingestion complete"
+
+log_step "Phase 6b: Merge scraper prices + compliance into audit_data.db..."
+if ! python3 "$SCRIPTS_DIR/merge_pipeline_data.py"; then
+    log_error "merge_pipeline_data.py failed"
+    exit 1
+fi
+log_success "Pipeline merge complete"
 
 # Phase 7: Validate final output
 log_step "Phase 7: Validating final database..."

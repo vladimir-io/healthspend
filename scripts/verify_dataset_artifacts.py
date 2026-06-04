@@ -44,8 +44,11 @@ def verify_full_db(path: Path) -> list[str]:
         errors.append(f"{path.name}: expected hospital registry, got {hospital_rows:,} rows")
     if price_rows < 10_000:
         errors.append(f"{path.name}: expected price ledger, got {price_rows:,} rows")
-    if len(cpts) < 1:
-        errors.append(f"{path.name}: no CPT codes in prices table")
+    if len(cpts) < 20:
+        errors.append(
+            f"{path.name}: expected broad CPT coverage (20+), got {len(cpts)} — "
+            "run build_public_db.sh or CI MRF ingest with HS_FULL_CPT_COVERAGE=1"
+        )
 
     conn.close()
     print(f"✓ {path.name}: full ledger — {price_rows:,} prices, {hospital_rows:,} hospitals, {len(cpts):,} CPTs")

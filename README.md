@@ -82,13 +82,16 @@ cargo check
 cargo run --release -- --help
 ```
 
-### 4) Ingest CMS metadata
+### 4) Build the full public database
 
-From the repo root:
+From the repo root (downloads MRFs and merges into `web/public/audit_data.db`):
 
 ```bash
-python3 ingest.py
+chmod +x scripts/build_public_db.sh
+HS_FULL_CPT_COVERAGE=1 ./scripts/build_public_db.sh
 ```
+
+For a single-state smoke build: `HS_FULL_CPT_COVERAGE=1 MRF_LIMIT=100 ./scripts/build_public_db.sh TX`
 
 ## Data notes
 

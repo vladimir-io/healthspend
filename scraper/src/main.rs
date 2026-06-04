@@ -66,13 +66,15 @@ async fn main() -> anyhow::Result<()> {
         ];
 
         for (path, ccn) in fixtures {
-            let result = if path.ends_with(".csv") {
-                parser_csv::parse_csv_tall(path, ccn)
+            let (inserted, readable) = if path.ends_with(".csv") {
+                let r = parser_csv::parse_csv_tall(path, ccn);
+                (r.records_inserted, r.mrf_machine_readable)
             } else {
-                parser_json::parse_json_streaming(path, ccn)
+                let r = parser_json::parse_json_streaming(path, ccn);
+                (r.records_inserted, r.mrf_machine_readable)
             };
-            auditor::update_parse_result(ccn, result.mrf_machine_readable, result.records_inserted)?;
-            tracing::info!(path, ccn, inserted = result.records_inserted, "fixture parsed");
+            auditor::update_parse_result(ccn, readable, inserted)?;
+            tracing::info!(path, ccn, inserted, "fixture parsed");
         }
 
         ran_something = true;

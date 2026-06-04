@@ -24,6 +24,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  HS_FULL_CPT_COVERAGE: '1'
 
 jobs:
   audit_states:
@@ -65,6 +66,17 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch discovery inputs
+        run: python3 scripts/fetch_discovery_inputs.py
+
       - name: Build scraper
         run: |
           cd scraper
@@ -79,6 +91,15 @@ jobs:
           cargo run --release --bin scraper -- --discover-only --state ${{ matrix.state }}
           cd ..
 
+      - name: Enrich hospital URLs for ${{ matrix.state }}
+        continue-on-error: true
+        run: |
+          python3 scripts/enrich_hospital_urls.py \
+            --compliance-db scraper/compliance.db \
+            --state ${{ matrix.state }} \
+            --limit 400 \
+            --workers 24
+
       - name: Run audit for ${{ matrix.state }}
         continue-on-error: true
         run: |
@@ -86,19 +107,17 @@ jobs:
           cargo run --release --bin scraper -- --audit-only --state ${{ matrix.state }}
           cd ..
 
-      - name: Run parser for ${{ matrix.state }}
+      - name: Ingest MRF prices for ${{ matrix.state }}
         continue-on-error: true
-        env:
-          HS_FULL_CPT_COVERAGE: ${{ github.event.inputs.full_cpt_coverage == 'true' && '1' || '0' }}
         run: |
-          cd scraper
-          cargo run --release --bin scraper -- --parse-only --state ${{ matrix.state }}
-          cd ..
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          mkdir -p /tmp/mrf-${{ matrix.state }}
+          python3 scripts/mrf_streamer.py \
+            --prices-db scraper/prices.db \
+            --compliance-db scraper/compliance.db \
+            --mrf-dir /tmp/mrf-${{ matrix.state }} \
+            --state ${{ matrix.state }} \
+            --limit 350 \
+            --cleanup
 
       - name: Validate output
         continue-on-error: true
@@ -176,35 +195,18 @@ jobs:
           for state in TX CA NY FL IL PA OH MI GA NC AZ CO WA MA VA; do
             gh run download ${{ github.run_id }} --name compliance-db-$state --dir /tmp/compliance_shards/$state 2>/dev/null || true
           done
-          # Merge all shards into scraper/compliance.db using SQLite UPSERT
-          python3 - <<'PY'
-          import sqlite3, os, glob
-          shards = glob.glob('/tmp/compliance_shards/*/compliance.db')
-          if not shards:
-              print('No compliance shards found.')
-              exit(0)
-          os.makedirs('scraper', exist_ok=True)
-          main = sqlite3.connect('scraper/compliance.db')
-          main.execute('''
-              CREATE TABLE IF NOT EXISTS compliance (
-                  ccn TEXT PRIMARY KEY, score INTEGER,
-                  txt_exists BOOLEAN, robots_ok BOOLEAN,
-                  mrf_reachable BOOLEAN, mrf_valid BOOLEAN, mrf_fresh BOOLEAN,
-                  shoppable_exists BOOLEAN, mrf_machine_readable INTEGER DEFAULT 1,
-                  waf_blocked INTEGER DEFAULT 0, last_checked TEXT, evidence_json TEXT
-              )
-          ''')
-          for shard_path in shards:
-              shard = sqlite3.connect(shard_path)
-              rows = shard.execute('SELECT * FROM compliance').fetchall()
-              shard.close()
-              main.executemany('''
-                  INSERT OR REPLACE INTO compliance VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-              ''', rows)
-          main.commit()
-          main.close()
-          print(f'Merged {len(shards)} compliance shards.')
-          PY
+          python3 scripts/merge_compliance_shards.py --shards-dir /tmp/compliance_shards --out scraper/compliance.db
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download and merge prices DBs from matrix jobs
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/prices_shards
+          for state in TX CA NY FL IL PA OH MI GA NC AZ CO WA MA VA; do
+            gh run download ${{ github.run_id }} --name prices-db-$state --dir /tmp/prices_shards/$state 2>/dev/null || true
+          done
+          python3 scripts/merge_prices_shards.py --shards-dir /tmp/prices_shards --out scraper/prices.db
         env:
           GH_TOKEN: ${{ github.token }}
 
@@ -221,7 +223,11 @@ jobs:
         run: python3 scripts/validate_database.py web/public/audit_data.db || true
 
       - name: Merge Pipeline Data
-        run: python3 scripts/merge_pipeline_data.py
+        run: |
+          if [ ! -f scraper/prices.db ]; then
+            echo "No merged scraper/prices.db — prices merge may have been skipped"
+          fi
+          python3 scripts/merge_pipeline_data.py
 
       - name: Build hot database shard
         run: python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db

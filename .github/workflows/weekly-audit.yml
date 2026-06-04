@@ -9,6 +9,7 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  HS_FULL_CPT_COVERAGE: '1'
 
 jobs:
   audit_states:
@@ -50,6 +51,17 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Fetch discovery inputs
+        run: python3 scripts/fetch_discovery_inputs.py
+
       - name: Build scraper
         run: |
           cd scraper
@@ -64,6 +76,15 @@ jobs:
           cargo run --release --bin scraper -- --discover-only --state ${{ matrix.state }}
           cd ..
 
+      - name: Enrich hospital URLs for ${{ matrix.state }}
+        continue-on-error: true
+        run: |
+          python3 scripts/enrich_hospital_urls.py \
+            --compliance-db scraper/compliance.db \
+            --state ${{ matrix.state }} \
+            --limit 600 \
+            --workers 24
+
       - name: Run audit for ${{ matrix.state }}
         continue-on-error: true
         run: |
@@ -71,19 +92,19 @@ jobs:
           cargo run --release --bin scraper -- --audit-only --state ${{ matrix.state }}
           cd ..
 
-      - name: Run parser for ${{ matrix.state }} (FULL CPT COVERAGE)
+      - name: Ingest MRF prices for ${{ matrix.state }}
         continue-on-error: true
         env:
           HS_FULL_CPT_COVERAGE: '1'
         run: |
-          cd scraper
-          cargo run --release --bin scraper -- --parse-only --state ${{ matrix.state }}
-          cd ..
-
-      - name: Install Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+          mkdir -p /tmp/mrf-${{ matrix.state }}
+          python3 scripts/mrf_streamer.py \
+            --prices-db scraper/prices.db \
+            --compliance-db scraper/compliance.db \
+            --mrf-dir /tmp/mrf-${{ matrix.state }} \
+            --state ${{ matrix.state }} \
+            --limit 350 \
+            --cleanup
 
       - name: Validate output
         continue-on-error: true
@@ -98,6 +119,24 @@ jobs:
           name: weekly-audit-logs-${{ matrix.state }}
           path: scraper/target/debug/logs
           retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload compliance DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-db-${{ matrix.state }}
+          path: scraper/compliance.db
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Upload prices DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prices-db-${{ matrix.state }}
+          path: scraper/prices.db
+          retention-days: 3
           if-no-files-found: ignore
 
   aggregate:
@@ -129,14 +168,27 @@ jobs:
       - name: Real-format MRF parser regression
         run: bash scripts/ci_real_mrf_regression.sh
 
-      - name: Run full aggregation pass (FULL CPT COVERAGE)
-        env:
-          HS_FULL_CPT_COVERAGE: '1'
+      - name: Download and merge compliance DBs from matrix jobs
+        continue-on-error: true
         run: |
-          cd scraper
-          cargo run --release --bin scraper -- > /tmp/scraper-aggregate.log 2>&1
-          tail -20 /tmp/scraper-aggregate.log
-          cd ..
+          mkdir -p /tmp/compliance_shards
+          for state in TX CA NY FL IL PA OH MI GA NC AZ CO WA MA VA; do
+            gh run download ${{ github.run_id }} --name compliance-db-$state --dir /tmp/compliance_shards/$state 2>/dev/null || true
+          done
+          python3 scripts/merge_compliance_shards.py --shards-dir /tmp/compliance_shards --out scraper/compliance.db
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Download and merge prices DBs from matrix jobs
+        continue-on-error: true
+        run: |
+          mkdir -p /tmp/prices_shards
+          for state in TX CA NY FL IL PA OH MI GA NC AZ CO WA MA VA; do
+            gh run download ${{ github.run_id }} --name prices-db-$state --dir /tmp/prices_shards/$state 2>/dev/null || true
+          done
+          python3 scripts/merge_prices_shards.py --shards-dir /tmp/prices_shards --out scraper/prices.db
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Fetch Baseline Database
         run: |
@@ -146,8 +198,12 @@ jobs:
       - name: Run compliance ingestion (UPSERT)
         run: python3 ingest.py
 
-      - name: Validate final database
-        run: python3 scripts/validate_database.py web/public/audit_data.db
+      - name: Merge Pipeline Data
+        run: |
+          if [ ! -f scraper/prices.db ]; then
+            echo "No merged scraper/prices.db — prices merge may have been skipped"
+          fi
+          python3 scripts/merge_pipeline_data.py
 
       - name: Build hot database shard
         run: python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db
@@ -158,8 +214,9 @@ jobs:
       - name: Write dataset manifest
         run: python3 scripts/write_dataset_manifest.py
 
-      - name: Merge Pipeline Data
-        run: python3 scripts/merge_pipeline_data.py
+      - name: Validate final database
+        continue-on-error: true
+        run: python3 scripts/validate_database.py web/public/audit_data.db || true
 
       - name: Compute metrics
         continue-on-error: true

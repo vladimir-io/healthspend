@@ -209,9 +209,19 @@ def merge_prices(conn: sqlite3.Connection, scraper_prices_db: str) -> int:
         if src_count == 0:
             return 0
 
-        # Pull from scraper and write to destination — map ccn → ein
+        existing = cur.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
+        min_replace = int(os.environ.get("HS_MIN_PRICES_REPLACE", "1000"))
+        if existing > 0 and src_count < min_replace:
+            print(
+                f"  ⚠ scraper has {src_count:,} rows (< {min_replace:,}) — "
+                f"keeping {existing:,} existing price rows"
+            )
+            return 0
+
+        cur.execute("DELETE FROM prices")
+
         cur.execute("""
-            INSERT OR REPLACE INTO prices
+            INSERT INTO prices
                 (ein, cpt_code, description,
                  cash_price, gross_charge,
                  min_negotiated, max_negotiated,
@@ -226,7 +236,8 @@ def merge_prices(conn: sqlite3.Connection, scraper_prices_db: str) -> int:
             FROM rust_prices.prices
         """)
         conn.commit()
-        return cur.rowcount
+        merged = cur.execute("SELECT COUNT(*) FROM prices").fetchone()[0]
+        return merged
     finally:
         conn.execute("DETACH DATABASE rust_prices")
 
