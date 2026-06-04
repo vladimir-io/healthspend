@@ -20,7 +20,7 @@ export async function renderScorecard(viewId: string) {
                     <span>7,400+ Federal Hospital Nodes</span>
                 </div>
                 <h1 class="hero-headline">Facility Audit Index</h1>
-                    <p class="hero-sub">Nationwide monitoring of federal price transparency compliance across 7,400+ CMS registered hospitals.</p>
+                    <p class="hero-sub">See how completely each hospital publishes prices and passes transparency checks — filter by state or CCN.</p>
             </div>
 
             <div class="audit-controls animate-up" style="--stagger:2;">
@@ -127,12 +127,6 @@ export async function renderScorecard(viewId: string) {
             });
 
             renderPagination(total);
-
-            const apiFooter = document.createElement('div');
-            apiFooter.className = 'api-cta-footer animate-up';
-            apiFooter.innerHTML = `Need this data as a structured feed? &nbsp;&middot;&nbsp; <strong>Use the Healthspend API</strong>`;
-            apiFooter.onclick = () => window.location.hash = 'api';
-            resultsList.appendChild(apiFooter);
         } catch (e) {
             console.error(e);
             resultsList.innerHTML = `<div style="padding:40px;text-align:center;color:var(--red);">Audit engine error. Please reload.</div>`;

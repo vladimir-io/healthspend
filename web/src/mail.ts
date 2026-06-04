@@ -1,3 +1,4 @@
+import { closeSheet, openSheet } from './app/micro.js';
 import { generateComplaintLetter, type ComplaintContext } from './complaint.js';
 
 export interface LetterParams {
@@ -65,9 +66,9 @@ export function handleComplaint(record: any) {
         };
     }
 
-    const closeOverlay = () => overlay.classList.add('hidden');
-    btnClose?.addEventListener('click', closeOverlay, { once: true });
-    backdrop?.addEventListener('click', closeOverlay, { once: true });
+    const closeOverlay = () => closeSheet(overlay);
+    btnClose?.addEventListener('click', closeOverlay);
+    backdrop?.addEventListener('click', closeOverlay);
 
-    overlay.classList.remove('hidden');
+    openSheet(overlay);
 }

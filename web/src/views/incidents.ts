@@ -20,7 +20,7 @@ export function renderIncidents(containerId: string) {
                 <span style="color:var(--text-secondary);">7,400+ Federal Hospital Nodes</span>
             </div>
             <h1 class="hero-headline">Incident Log</h1>
-                <p class="hero-sub">Nationwide monitoring of federal price transparency compliance across 7,400+ CMS registered hospitals.</p>
+                <p class="hero-sub">Hospitals with failed transparency checks — use this when a filing is broken, blocked, or missing required data (not for billing disputes).</p>
         </div>
 
         <div class="audit-controls animate-up" style="--stagger:2;">
@@ -115,12 +115,6 @@ export function renderIncidents(containerId: string) {
             });
 
             renderPagination(total);
-
-            const apiFooter = document.createElement('div');
-            apiFooter.className = 'api-cta-footer animate-up';
-            apiFooter.innerHTML = `Need this feed as a structured API? &nbsp;&middot;&nbsp; <strong>Use the Healthspend API</strong>`;
-            apiFooter.onclick = () => window.location.hash = 'api';
-            feed.appendChild(apiFooter);
         } catch {
             feed.innerHTML = `<div style="padding:40px;text-align:center;color:var(--yc-orange);">Audit engine error. Please reload.</div>`;
         }

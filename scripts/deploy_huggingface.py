@@ -17,7 +17,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Publish artifacts to Hugging Face Datasets")
     parser.add_argument("--repo-id", required=True, help="Hugging Face repo ID (e.g., vladimir-io/healthspend-data)")
     parser.add_argument("--files", nargs="+", required=True, help="Artifact files to publish")
-    parser.add_argument("--token", help="Hugging Face API token. If omitted, expects HUGGINGFACE_CO_TOKEN or HF_TOKEN in environment.")
+    parser.add_argument("--token", help="Hugging Face API token. If omitted, reads HF_TOKEN, HF, or HUGGINGFACE_CO_TOKEN from environment.")
     args = parser.parse_args()
 
     files = [Path(p) for p in args.files]
@@ -25,8 +25,19 @@ def main() -> int:
         if not f.exists():
             raise SystemExit(f"Missing file: {f}")
 
+    import os
+
+    token = (
+        args.token
+        or os.environ.get("HF_TOKEN")
+        or os.environ.get("HF")
+        or os.environ.get("HUGGINGFACE_CO_TOKEN")
+    )
+    if not token:
+        raise SystemExit("Missing Hugging Face token. Set HF, HF_TOKEN, or pass --token.")
+
     print(f"Connecting to Hugging Face dataset: {args.repo_id}")
-    api = HfApi(token=args.token)
+    api = HfApi(token=token)
     
     for f in files:
         print(f"Uploading {f.name} ({f.stat().st_size} bytes)...")

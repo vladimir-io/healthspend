@@ -126,6 +126,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Real-format MRF parser regression
+        run: bash scripts/ci_real_mrf_regression.sh
+
       - name: Run full aggregation pass (FULL CPT COVERAGE)
         env:
           HS_FULL_CPT_COVERAGE: '1'
@@ -145,6 +148,9 @@ jobs:
 
       - name: Validate final database
         run: python3 scripts/validate_database.py web/public/audit_data.db
+
+      - name: Build hot database shard
+        run: python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db
 
       - name: Merge Pipeline Data
         run: python3 scripts/merge_pipeline_data.py
@@ -186,7 +192,7 @@ jobs:
         run: |
           if [ -n "$HF_TOKEN" ]; then
             pip install huggingface_hub
-            python3 scripts/deploy_huggingface.py --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db
+            python3 scripts/deploy_huggingface.py --repo-id vladimir-io/healthspend-data --files web/public/audit_data.db web/public/audit_hot.db
           else
             echo "Skipping Hugging Face deployment because HF_TOKEN secret is not set."
           fi

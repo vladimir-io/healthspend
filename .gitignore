@@ -72,6 +72,15 @@ Thumbs.db
 web/.env
 web/.env.local
 web/.env.*.local
+
+# Playwright
+web/test-results/
+playwright-report/
+
+# Local DB artifacts (published via Hugging Face)
+web/public/audit_data.db
+web/public/audit_hot.db
+.venv-hf/
 wrangler.toml
 
 # ── Tracked exceptions ───────────────────────────────────────────────────────

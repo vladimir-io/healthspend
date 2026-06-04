@@ -3,8 +3,9 @@
 
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#000000" id="meta-theme-color" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#050507" id="meta-theme-color" />
+  <meta name="color-scheme" content="dark light" />
   <meta id="meta-desc" name="description"
     content="Empowering you with healthcare clarity. Discover clear hospital rates and navigate your medical journey with confidence using real-time data from 7,400+ US hospitals inspired by the 2026 transparency standards." />
   <meta name="keywords"
@@ -65,12 +66,13 @@
         <div class="logo">healthspend</div>
       </a>
       <div class="nav-controls">
-        <div class="nav-actions">
+        <div class="nav-actions nav-actions--desktop">
           <div id="nav-indicator"></div>
-          <a href="#search" class="nav-tab">Search</a>
-          <a href="#scorecard" class="nav-tab">Audit Index</a>
-          <a href="#incidents" class="nav-tab">Incident Log</a>
-          <a href="#mission" class="nav-tab">Mission</a>
+          <a href="#search" class="nav-tab" data-route="search">Search</a>
+          <a href="#scorecard" class="nav-tab" data-route="scorecard">Audit Index</a>
+          <a href="#incidents" class="nav-tab" data-route="incidents">Incident Log</a>
+          <a href="#methodology" class="nav-tab" data-route="methodology">Methodology</a>
+          <a href="#mission" class="nav-tab" data-route="mission">Mission</a>
 
           <div class="search-divider" style="height: 20px; margin: 0 8px;"></div>
         </div>
@@ -95,8 +97,41 @@
         </button>
       </div>
     </div>
-    </div>
   </nav>
+
+  <nav class="mobile-bottom-nav" aria-label="Primary navigation">
+    <a href="#search" class="bottom-nav-item" data-route="search">
+      <span class="bottom-nav-icon" aria-hidden="true">⌕</span>
+      <span>Search</span>
+    </a>
+    <a href="#scorecard" class="bottom-nav-item" data-route="audit">
+      <span class="bottom-nav-icon" aria-hidden="true">◈</span>
+      <span>Audit</span>
+    </a>
+    <button type="button" class="bottom-nav-item" id="nav-more-btn" aria-expanded="false" aria-haspopup="true">
+      <span class="bottom-nav-icon" aria-hidden="true">⋯</span>
+      <span>More</span>
+    </button>
+  </nav>
+
+  <div id="nav-more-menu" class="nav-more-menu hidden" role="menu" aria-label="More pages">
+    <a href="#incidents" role="menuitem" data-route="incidents">Incident log</a>
+    <a href="#methodology" role="menuitem" data-route="methodology">Methodology</a>
+    <a href="#mission" role="menuitem" data-route="mission">Mission</a>
+    <a href="/developers.html" role="menuitem">Developers &amp; data</a>
+  </div>
+
+  <div id="onboarding-root" class="onboarding hidden" aria-hidden="true">
+    <div class="onboarding-scrim"></div>
+    <div id="onboarding-bubble" class="onboarding-bubble" role="dialog" aria-labelledby="onboarding-title">
+      <p class="onboarding-step" id="onboarding-title"></p>
+      <p class="onboarding-body" id="onboarding-body"></p>
+      <div class="onboarding-actions">
+        <button type="button" id="onboarding-skip" class="btn-ghost">Skip</button>
+        <button type="button" id="onboarding-next" class="btn primary">Next</button>
+      </div>
+    </div>
+  </div>
 
   <div id="app">
     <div id="view-search" class="tab-view active">
@@ -104,13 +139,31 @@
         <div class="status-pill-container">
           <div class="live-dot"></div><span>7,400+ Federal Hospital Nodes</span>
         </div>
-        <h1 class="hero-headline">The open ledger for<br>US hospital prices.</h1>
+        <h1 class="hero-headline">Compare hospital prices.<br>Challenge bills above posted cash rates.</h1>
         <p class="hero-sub" style="max-width:none;">Bringing price transparency to healthcare.
           <br /> Powered by live audits of 7,400+ US hospitals under the <a
             href="https://www.cms.gov/newsroom/fact-sheets/cy-2026-opps-ambulatory-surgical-center-final-rule-hospital-price-transparency-policy-changes#:~:text=To%20further%20transparency%20and%20the,the%20next%20highest%20observed%20value."
             target="_blank" style="color:inherit; text-decoration:underline; text-underline-offset:4px;"><span
               class="current-year">2026</span> CMS mandate</a>.
         </p>
+      </section>
+
+      <section class="hero-journey animate-up" style="--stagger: 1.5;" aria-label="Primary workflows">
+        <button type="button" class="hero-journey-card" data-hero-intent="shop">
+          <span class="hero-journey-step">1</span>
+          <strong>Compare before care</strong>
+          <span>Search a procedure, confirm the published cash rate, email the hospital for a written estimate.</span>
+        </button>
+        <button type="button" class="hero-journey-card hero-journey-card--accent" data-hero-intent="bill">
+          <span class="hero-journey-step">2</span>
+          <strong>Bill above the posted rate?</strong>
+          <span>Find the line item, open <em>Use this rate</em>, and request an itemization or adjustment.</span>
+        </button>
+        <button type="button" class="hero-journey-card" data-hero-intent="cms">
+          <span class="hero-journey-step">3</span>
+          <strong>Broken transparency filing?</strong>
+          <span>Use Full Audit or Incident Log for CMS enforcement — separate from billing emails.</span>
+        </button>
       </section>
 
       <section class="search-section animate-up" style="--stagger: 2;">
@@ -235,92 +288,67 @@
         </div>
       </section>
 
+      <section id="search-welcome" class="search-empty-state animate-up" style="--stagger: 3.1;" aria-label="Search preview">
+        <div class="search-empty-state__glow" aria-hidden="true"></div>
+        <p class="search-empty-state__eyebrow">7,400+ hospitals · federal MRF filings</p>
+        <h2 class="search-empty-state__headline">What should this cost?</h2>
+        <p class="search-empty-state__sub">The price is already public. Search a procedure — then compare, email the hospital, or challenge a bill above the posted cash rate.</p>
+        <div class="price-compare-demo" aria-hidden="true">
+          <div class="price-compare-demo__col price-compare-demo__col--high">
+            <span class="price-compare-demo__facility">Regional Medical</span>
+            <span class="price-compare-demo__code">MRI brain · 70551</span>
+            <span class="price-compare-demo__amount">$3,840</span>
+          </div>
+          <div class="price-compare-demo__bridge">
+            <span class="price-compare-demo__vs">vs</span>
+            <span class="price-compare-demo__distance">12 mi apart</span>
+          </div>
+          <div class="price-compare-demo__col price-compare-demo__col--low">
+            <span class="price-compare-demo__facility">Community Imaging</span>
+            <span class="price-compare-demo__code">Same procedure</span>
+            <span class="price-compare-demo__amount">$890</span>
+          </div>
+        </div>
+        <p class="search-empty-state__hint">Pick a workflow above or tap a quick search tag.</p>
+      </section>
+
       <section id="search-loading-indicator" class="search-loading-minimal hidden animate-up" style="--stagger: 3.2;"
-        aria-live="polite">
+        aria-live="polite" aria-busy="true">
         <div class="search-loading-minimal-dots" aria-hidden="true">
           <span></span><span></span><span></span>
         </div>
+        <span class="search-loading-label">Searching published rates…</span>
       </section>
 
-      <section id="results-context-banner" class="hidden animate-up" style="--stagger: 3.5; margin: 32px 0 40px;">
-        <div
-          style="display:flex; justify-content:space-between; align-items:flex-end; border-bottom: 2px solid var(--border-medium); padding-bottom: 16px; gap: 40px; flex-wrap: wrap;">
-          <div style="flex: 1; min-width: 300px;">
-            <div style="display:flex; align-items:baseline; gap:16px; margin-bottom: 6px;">
-              <h2 id="results-audit-label"
-                style="font-size:2.4rem; font-weight:900; letter-spacing:-0.04em; margin:0; text-transform:uppercase;">
-                Price Audit</h2>
-              <span id="omitted-stats"
-                style="font-family:var(--font-mono); font-size:0.65rem; letter-spacing:0.08em; font-weight:900; color:var(--yc-orange);"></span>
+      <section id="results-context-banner" class="results-panel hidden animate-up" style="--stagger: 3.5;">
+        <div class="results-panel__header">
+          <div class="results-panel__intro">
+            <div class="results-panel__title-row">
+              <h2 id="results-audit-label" class="results-panel__title">Price comparison</h2>
+              <span id="omitted-stats" class="results-panel__badge"></span>
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <p style="font-size:0.95rem; color:var(--text-secondary); line-height:1.4; margin:0;">Federally audited
-                cash rates and negotiated pricing spreads.</p>
-            </div>
-            <p id="results-summary"
-              style="margin-top:10px; font-size:0.72rem; color:var(--text-tertiary); font-family:var(--font-mono); letter-spacing:0.05em; text-transform:uppercase;">
-              Search ready</p>
+            <p class="results-panel__lede">Published cash rates from hospital transparency files, sorted for your region.</p>
+            <p id="results-summary" class="results-panel__meta">Search a procedure to compare published cash rates near you.</p>
           </div>
 
-          <div id="market-rates-panel" class="hidden"
-            style="display:flex; gap:32px; align-items:center; background:var(--bg-card-2); padding:20px 28px; border-radius:16px; border:1px solid var(--border-subtle); box-shadow: var(--shadow-card);">
-            <div>
-              <div
-                style="font-family:var(--font-mono); font-size:0.6rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.12em; font-weight:800; margin-bottom:10px;">
-                Market Benchmark</div>
-              <div style="display:flex; gap:32px; align-items:baseline;">
-                <div style="text-align:left;">
-                  <span
-                    style="display:block; font-size:0.55rem; color:var(--text-tertiary); font-weight:700; margin-bottom:2px;">MIN</span>
-                  <span id="market-min"
-                    style="font-family:var(--font-mono); font-size:1.1rem; font-weight:800; color:var(--rh-green);">$0</span>
-                </div>
-                <div style="text-align:left;">
-                  <span
-                    style="display:block; font-size:0.55rem; color:var(--text-tertiary); font-weight:700; margin-bottom:2px;">MEDIAN</span>
-                  <span id="market-median"
-                    style="font-family:var(--font-mono); font-size:1.1rem; font-weight:800; color:var(--text-primary);">$0</span>
-                </div>
-                <div style="text-align:left;">
-                  <span
-                    style="display:block; font-size:0.55rem; color:var(--text-tertiary); font-weight:700; margin-bottom:2px;">MAX</span>
-                  <span id="market-max"
-                    style="font-family:var(--font-mono); font-size:1.1rem; font-weight:800; color:var(--text-secondary);">$0</span>
-                </div>
-              </div>
-              <div style="display:flex; gap:32px; align-items:baseline; margin-top:8px;">
-                <div style="text-align:left;">
-                  <span
-                    style="display:block; font-size:0.55rem; color:var(--text-tertiary); font-weight:700; margin-bottom:2px;">P10</span>
-                  <span id="market-p10"
-                    style="font-family:var(--font-mono); font-size:0.95rem; font-weight:700; color:var(--text-secondary);">$0</span>
-                </div>
-                <div style="text-align:left;">
-                  <span
-                    style="display:block; font-size:0.55rem; color:var(--text-tertiary); font-weight:700; margin-bottom:2px;">P90</span>
-                  <span id="market-p90"
-                    style="font-family:var(--font-mono); font-size:0.95rem; font-weight:700; color:var(--text-secondary);">$0</span>
-                </div>
-              </div>
+          <div id="market-rates-panel" class="market-panel hidden">
+            <p class="market-panel__label">Market range (this search)</p>
+            <div class="market-panel__stats">
+              <div class="market-stat"><span class="market-stat__k">Low</span><span id="market-min" class="market-stat__v market-stat__v--low">$0</span></div>
+              <div class="market-stat"><span class="market-stat__k">Median</span><span id="market-median" class="market-stat__v">$0</span></div>
+              <div class="market-stat"><span class="market-stat__k">High</span><span id="market-max" class="market-stat__v">$0</span></div>
+              <div class="market-stat"><span class="market-stat__k">P10</span><span id="market-p10" class="market-stat__v market-stat__v--muted">$0</span></div>
+              <div class="market-stat"><span class="market-stat__k">P90</span><span id="market-p90" class="market-stat__v market-stat__v--muted">$0</span></div>
             </div>
-            <div style="width:1px; height:48px; background:var(--border-subtle);"></div>
-            <div style="max-width:260px;">
-              <p style="font-size:0.68rem; color:var(--text-tertiary); line-height:1.5; font-weight:500; margin:0;">
-                <strong
-                  style="color:var(--yc-orange); text-transform:uppercase; font-size:0.6rem; letter-spacing:0.05em; display:block; margin-bottom:2px;">Rate
-                  Intelligence</strong>
-                Hospital cash rates are typically 40–70% below negotiated insurance prices.
-              </p>
-              <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-top:10px;">
-                <span style="font-size:0.72rem; color:var(--text-secondary); font-weight:600;">Sort:</span>
-                <select id="sort-select" class="state-pill"
-                  style="border:1px solid var(--border-medium); border-radius:8px; padding:4px 10px; font-size:0.72rem; background:transparent; min-width:152px;">
-                  <option value="price-asc">Price: Low to High</option>
-                  <option value="price-desc">Price: High to Low</option>
-                  <option value="score-desc">Compliance Score</option>
-                </select>
-              </div>
-            </div>
+            <p class="market-panel__hint">Cash rates are often lower than insured negotiated prices — verify with the hospital before paying.</p>
+            <label class="market-panel__sort">
+              <span>Sort</span>
+              <select id="sort-select" class="state-pill">
+                <option value="price-asc">Price: low to high</option>
+                <option value="price-desc">Price: high to low</option>
+                <option value="score-desc">Compliance score</option>
+              </select>
+            </label>
           </div>
         </div>
       </section>
@@ -335,204 +363,9 @@
     <div id="view-incidents" class="tab-view hidden">
     </div>
 
-    <div id="view-api" class="tab-view hidden" style="max-width:1050px; margin: 40px auto; padding: 0 24px 140px;">
-      <header style="margin-bottom:80px; border-bottom:1px solid var(--border-medium); padding-bottom:48px;">
-        <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
-          <div
-            style="width:12px; height:12px; background:var(--yc-orange); border-radius:3px; box-shadow:0 0 15px var(--yc-orange-glow);">
-          </div>
-          <span
-            style="font-family:var(--font-mono); font-size:0.75rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.2em; font-weight:800;">Infrastructure
-            Access &middot; v1.0</span>
-        </div>
-        <h1 style="font-size:4.2rem; font-weight:900; letter-spacing:-0.05em; line-height:0.9; margin:0;">Developer API
-        </h1>
-        <p style="font-size:1.2rem; color:var(--text-secondary); margin-top:24px; max-width:700px; line-height:1.6;">
-          Automated price discovery, market context aggregation, and programmatic enforcement triggers for your medical
-          bill negotiation platforms.
-        </p>
-      </header>
+    <div id="view-methodology" class="tab-view hidden"></div>
 
-      <div style="display:flex; flex-direction:column; gap:100px;">
-
-        <!-- GET /SEARCH -->
-        <section class="api-grid">
-          <div class="api-docs-text">
-            <div style="margin-bottom:20px;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; background:rgba(0,100,255,0.15); color:var(--text-accent); padding:5px 10px; border-radius:6px; font-weight:900; letter-spacing:0.05em;">GET</span>
-              <span
-                style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-tertiary); margin-left:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">/api/v1/search</span>
-            </div>
-            <h3 style="font-size:1.8rem; font-weight:900; margin-bottom:14px; letter-spacing:-0.03em;">Audit Ledger
-              Search</h3>
-            <p style="color:var(--text-secondary); line-height:1.65; font-size:0.95rem; margin-bottom:28px;">
-              Execute deep-audits against the global pricing index. Supports semantic procedure queries, CPT codes, and
-              strict geospatial boundaries.
-            </p>
-            <div
-              style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-tertiary); text-transform:uppercase; letter-spacing:0.15em; font-weight:800; border-bottom:1px solid var(--border-subtle); padding-bottom:12px; margin-bottom:16px;">
-              Parameters</div>
-            <div style="display:flex; flex-direction:column; gap:12px;">
-              <div style="display:flex; align-items:baseline; gap:16px;"><code
-                  style="color:var(--text-primary); font-weight:800;">q</code> <span
-                  style="font-size:0.85rem; color:var(--text-tertiary);">Query string (e.g. "knee replacement")</span>
-              </div>
-              <div style="display:flex; align-items:baseline; gap:16px;"><code
-                  style="color:var(--text-primary); font-weight:800;">zip</code> <span
-                  style="font-size:0.85rem; color:var(--text-tertiary);">Origin US Zip Code (Optional)</span></div>
-              <div style="display:flex; align-items:baseline; gap:16px;"><code
-                  style="color:var(--text-primary); font-weight:800;">radius</code> <span
-                  style="font-size:0.85rem; color:var(--text-tertiary);">Search radius in miles (Optional, default:
-                  25)</span></div>
-            </div>
-          </div>
-
-          <div class="code-terminal"
-            style="background:#0a0a0f; border:1px solid #1a1a25; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden;">
-            <div
-              style="background:#14141f; padding:12px 20px; border-bottom:1px solid #1a1a25; display:flex; justify-content:space-between; align-items:center;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-tertiary); font-weight:700; letter-spacing:0.05em;">SHELL
-                &middot; CURL</span>
-            </div>
-            <pre
-              style="padding:28px; margin:0; font-family:var(--font-mono); font-size:0.85rem; line-height:1.7; color:#a9b7c6; overflow-x:auto;"><code><span style="color:#cc7832;">curl</span> <span style="color:#6a8759;">"https://healthspend.lol/api/v1/search?q=knee+replacement&zip=90210&radius=20"</span></code></pre>
-          </div>
-        </section>
-
-        <!-- GET /RATES -->
-        <section class="api-grid">
-          <div class="api-docs-text">
-            <div style="margin-bottom:20px;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; background:rgba(0,100,255,0.15); color:var(--text-accent); padding:5px 10px; border-radius:6px; font-weight:900; letter-spacing:0.05em;">GET</span>
-              <span
-                style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-tertiary); margin-left:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">/api/v1/rates</span>
-            </div>
-            <h3 style="font-size:1.8rem; font-weight:900; margin-bottom:14px; letter-spacing:-0.03em;">Market Context
-              Aggregation</h3>
-            <p style="color:var(--text-secondary); line-height:1.65; font-size:0.95rem; margin-bottom:28px;">
-              Retrieve the statistical cash-rate spread for a specific procedure within a defined market to instantly
-              identify predatory billing.
-            </p>
-          </div>
-
-          <div class="code-terminal"
-            style="background:#0a0a0f; border:1px solid #1a1a25; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden;">
-            <div
-              style="background:#14141f; padding:12px 20px; border-bottom:1px solid #1a1a25; display:flex; justify-content:space-between; align-items:center;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-tertiary); font-weight:700; letter-spacing:0.05em;">RESPONSE
-                &middot; JSON</span>
-            </div>
-            <pre
-              style="padding:28px; margin:0; font-family:var(--font-mono); font-size:0.85rem; line-height:1.5; color:#a9b7c6; overflow-x:auto;"><code>{
-  <span style="color:#9876aa;">"cpt_code"</span>: <span style="color:#6a8759;">"27447"</span>,
-  <span style="color:#9876aa;">"market_zip"</span>: <span style="color:#6a8759;">"90210"</span>,
-  <span style="color:#9876aa;">"radius_miles"</span>: <span style="color:#6897bb;">20</span>,
-  <span style="color:#9876aa;">"cash_rate"</span>: {
-    <span style="color:#9876aa;">"min"</span>: <span style="color:#6897bb;">12500.00</span>,
-    <span style="color:#9876aa;">"median"</span>: <span style="color:#6897bb;">18200.00</span>,
-    <span style="color:#9876aa;">"max"</span>: <span style="color:#6897bb;">45000.00</span>
-  }
-}</code></pre>
-          </div>
-        </section>
-
-        <!-- POST /DISPUTE -->
-        <section class="api-grid">
-          <div class="api-docs-text">
-            <div style="margin-bottom:20px;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; background:rgba(255,165,0,0.15); color:#FFA500; padding:5px 10px; border-radius:6px; font-weight:900; letter-spacing:0.05em;">POST</span>
-              <span
-                style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-tertiary); margin-left:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">/api/v1/dispute</span>
-            </div>
-            <h3 style="font-size:1.8rem; font-weight:900; margin-bottom:14px; letter-spacing:-0.03em;">Programmatic
-              Enforcement</h3>
-            <p style="color:var(--text-secondary); line-height:1.65; font-size:0.95rem; margin-bottom:28px;">
-              Generate a legally formatted, deterministic debt dispute letter using a specific hospital's published
-              federal pricing data.
-            </p>
-          </div>
-
-          <div class="code-terminal"
-            style="background:#0a0a0f; border:1px solid #1a1a25; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden;">
-            <div
-              style="background:#14141f; padding:12px 20px; border-bottom:1px solid #1a1a25; display:flex; justify-content:space-between; align-items:center;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-tertiary); font-weight:700; letter-spacing:0.05em;">REQUEST
-                BODY</span>
-            </div>
-            <pre
-              style="padding:28px; margin:0; font-family:var(--font-mono); font-size:0.85rem; line-height:1.5; color:#a9b7c6; overflow-x:auto;"><code>{
-  <span style="color:#9876aa;">"hospital_ccn"</span>: <span style="color:#6a8759;">"050001"</span>,
-  <span style="color:#9876aa;">"cpt_code"</span>: <span style="color:#6a8759;">"70551"</span>
-}</code></pre>
-          </div>
-        </section>
-
-        <!-- GET /COMPLIANCE -->
-        <section class="api-grid">
-          <div class="api-docs-text">
-            <div style="margin-bottom:20px;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; background:rgba(255,96,0,0.15); color:var(--yc-orange); padding:5px 10px; border-radius:6px; font-weight:900; letter-spacing:0.05em;">GET</span>
-              <span
-                style="font-family:var(--font-mono); font-size:0.7rem; color:var(--text-tertiary); margin-left:12px; text-transform:uppercase; letter-spacing:0.1em; font-weight:700;">/api/v1/compliance</span>
-            </div>
-            <h3 style="font-size:1.8rem; font-weight:900; margin-bottom:14px; letter-spacing:-0.03em;">Hospital
-              Compliance Matrix</h3>
-            <p style="color:var(--text-secondary); line-height:1.65; font-size:0.95rem; margin-bottom:28px;">
-              Retrieve the authoritative compliance score and specific violation evidence for any hospital identified by
-              its CMS Certification Number (CCN).
-            </p>
-          </div>
-
-          <div class="code-terminal"
-            style="background:#0a0a0f; border:1px solid #1a1a25; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,0.5); overflow:hidden;">
-            <div
-              style="background:#14141f; padding:12px 20px; border-bottom:1px solid #1a1a25; display:flex; justify-content:space-between; align-items:center;">
-              <span
-                style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-tertiary); font-weight:700; letter-spacing:0.05em;">RESPONSE
-                &middot; JSON</span>
-            </div>
-            <pre
-              style="padding:28px; margin:0; font-family:var(--font-mono); font-size:0.85rem; line-height:1.5; color:#a9b7c6; overflow-x:auto;"><code>{
-  <span style="color:#9876aa;">"ccn"</span>: <span style="color:#6a8759;">"050001"</span>,
-  <span style="color:#9876aa;">"score"</span>: <span style="color:#6897bb;">100</span>,
-  <span style="color:#9876aa;">"status"</span>: <span style="color:#6a8759;">"VERIFIED COMPLIANT"</span>
-}</code></pre>
-          </div>
-        </section>
-
-        <footer
-          style="border-top:1px solid var(--border-subtle); padding-top:60px; margin-top:40px; text-align:center;">
-          <p style="font-size:0.95rem; color:var(--text-secondary); max-width:600px; margin: 0 auto; line-height:1.6;">
-            Direct SQLite access to the raw data ledger is updated nightly and available at <br />
-            <code
-              style="display:inline-block; margin-top:10px; padding:6px 12px; background:var(--bg-card-2); border-radius:6px; color:var(--text-primary); border:1px solid var(--border-subtle); font-family:var(--font-mono);">/audit_data.db</code>
-          </p>
-          <div
-            style="margin-top:48px; display:flex; justify-content:center; gap:32px; font-family:var(--font-mono); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.15em; font-weight:800;">
-            <a href="https://github.com/vladimir-io/healthspend"
-              style="color:var(--text-tertiary); text-decoration:none; transition: color 0.2s;"
-              onmouseover="this.style.color='var(--text-primary)'"
-              onmouseout="this.style.color='var(--text-tertiary)'">GitHub</a>
-            <a href="mailto:api@healthspend.lol"
-              style="color:var(--text-tertiary); text-decoration:none; transition: color 0.2s;"
-              onmouseover="this.style.color='var(--text-primary)'"
-              onmouseout="this.style.color='var(--text-tertiary)'">Support</a>
-            <a href="#mission" style="color:var(--text-tertiary); text-decoration:none; transition: color 0.2s;"
-              onmouseover="this.style.color='var(--text-primary)'"
-              onmouseout="this.style.color='var(--text-tertiary)'">Federal Mandate</a>
-          </div>
-        </footer>
-      </div>
-    </div>
-
-    <div id="view-mission" class="tab-view hidden" style="max-width:720px; margin: 40px auto; padding-bottom: 60px;">
+    <div id="view-mission" class="tab-view hidden content-page">
       <div style="margin-bottom:40px;">
         <h1 style="font-size:3.2rem; font-weight:900; letter-spacing:-0.04em; margin-top:0;">The Mission</h1>
       </div>
@@ -575,12 +408,12 @@
   <!-- Shared Bottom Sheets -->
   <div id="detail-overlay" class="hidden bottom-sheet">
     <div class="sheet-backdrop"></div>
-    <div id="detail-content" class="sheet-content"></div>
+    <div id="detail-content" class="sheet-content" tabindex="-1" role="dialog" aria-modal="true"></div>
   </div>
 
   <div id="letter-overlay" class="hidden bottom-sheet">
     <div class="sheet-backdrop"></div>
-    <div class="sheet-content">
+    <div class="sheet-content" tabindex="-1" role="dialog" aria-modal="true">
       <button id="btn-close-letter" class="icon-btn"
         style="position:absolute;top:20px;right:20px;font-size:1.1rem;">✕</button>
       <div style="margin-bottom:12px;">
@@ -615,15 +448,26 @@
 
   <div id="dispute-overlay" class="hidden bottom-sheet">
     <div class="sheet-backdrop"></div>
-    <div class="sheet-content">
+    <div class="sheet-content" tabindex="-1" role="dialog" aria-modal="true">
       <button id="btn-close-dispute" class="icon-btn"
         style="position:absolute;top:20px;right:20px;font-size:1.1rem;">✕</button>
       <div style="margin-bottom:12px;">
-        <p class="modal-eyebrow" style="margin-bottom:4px; font-size:0.7rem;">Rate Dispute Letter &nbsp;·&nbsp; Patient
-          Rights</p>
-        <h2 class="modal-title" style="font-size:1.4rem; margin:0;">Cash Rate Reduction Demand</h2>
+        <p class="modal-eyebrow" style="margin-bottom:4px; font-size:0.7rem;">Posted cash rate &nbsp;·&nbsp; Email helper</p>
+        <h2 class="modal-title" style="font-size:1.4rem; margin:0;">Use this published rate</h2>
+        <p style="font-size:0.75rem;color:var(--text-secondary);margin:8px 0 0;line-height:1.45;">Pick what matches you. The draft updates. CMS filing and audit depth stay in Facility Audit and Incident flows.</p>
       </div>
       <div class="modal-divider"></div>
+      <fieldset style="border:none;margin:0 0 14px;padding:0;">
+        <legend style="font-size:0.68rem;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Your situation</legend>
+        <label style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;cursor:pointer;font-size:0.82rem;">
+          <input type="radio" name="dispute-intent" id="dispute-intent-shopping" value="price_shopping" checked style="margin-top:3px;" />
+          <span>I am comparing prices or booking care (estimate or confirmation before I owe)</span>
+        </label>
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:0.82rem;">
+          <input type="radio" name="dispute-intent" id="dispute-intent-billed" value="bill_above_posted" style="margin-top:3px;" />
+          <span>I already have a bill and the charge is above this published cash rate</span>
+        </label>
+      </fieldset>
       <div class="document-paper" style="flex:1;min-height:56vh;margin-bottom:12px;">
         <textarea id="dispute-draft" spellcheck="false" style="min-height:50vh;"></textarea>
       </div>
@@ -637,14 +481,12 @@
       <div class="modal-divider"></div>
       <div class="regulatory-grid">
         <div class="regulatory-panel">
-          <p class="regulatory-panel-title">Step 1 — Send to Billing</p>
-          <p>This letter cites the hospital's own publicly attested price. Billing departments cannot legally contradict
-            their own federally disclosed rate.</p>
+          <p class="regulatory-panel-title">Before you send</p>
+          <p>Replace the placeholder address with the billing or patient estimates contact from your paperwork or the hospital website. This tool is for shopping and billing questions, not enforcement.</p>
         </div>
         <div class="regulatory-panel">
-          <p class="regulatory-panel-title">Step 2 — Escalate if Needed</p>
-          <p>If the billing department rejects your first demand, escalate directly to the Facility Compliance Officer
-            or file a CMS complaint from the Incident Log.</p>
+          <p class="regulatory-panel-title">Filing and enforcement</p>
+          <p>Use Full Audit on each result card and the Incident log when you want to report transparency or data quality issues to CMS. That path stays separate from this letter.</p>
         </div>
       </div>
     </div>
@@ -654,7 +496,7 @@
   <!-- CPT Code Reference Overlay -->
   <div id="cpt-overlay" class="hidden bottom-sheet">
     <div class="sheet-backdrop" id="cpt-backdrop"></div>
-    <div class="sheet-content" style="max-width:860px;">
+    <div class="sheet-content" style="max-width:860px;" tabindex="-1" role="dialog" aria-modal="true">
       <button id="btn-close-cpt" class="icon-btn"
         style="position:absolute;top:20px;right:20px;font-size:1.1rem;">&#x2715;</button>
       <div
@@ -687,11 +529,20 @@
     </div>
   </div>
 
-  <footer
-    style="margin: 80px auto 40px; text-align: center; border-top: 1px solid var(--border-subtle); padding-top: 40px; max-width: 900px;">
-    <p style="font-size: 0.75rem; color: var(--text-secondary); opacity: 0.6;">&copy; <span
-        class="current-year">2026</span> Healthspend Institutional Hub. All clinical data audited from federal <span
-        class="current-year">2026</span> CMS Price Transparency machine readable ledgers.</p>
+  <footer class="site-legal-footer">
+    <details class="legal-disclosure">
+      <summary class="legal-disclosure__summary">
+        <span>Legal &amp; disclaimers</span>
+        <span class="legal-disclosure__chevron" aria-hidden="true">▾</span>
+      </summary>
+      <div class="legal-disclosure__body">
+        <p>Healthspend is <strong>not legal, medical, or billing advice</strong> and is <strong>not a substitute for your EOB</strong> or itemized bill.</p>
+        <p>Published cash rates may not apply to your payer or visit — <strong>confirm with hospital billing</strong> before paying.</p>
+        <p>Cross-check on <a href="https://www.medicare.gov/care-compare/" target="_blank" rel="noopener">Medicare Care Compare</a>. See live MRF links in Full Audit.</p>
+        <p class="legal-disclosure__links"><a href="#methodology">Methodology</a> · <a href="https://github.com/vladimir-io/healthspend" target="_blank" rel="noopener">GitHub</a> · <a href="/developers.html">Developers</a></p>
+      </div>
+    </details>
+    <p class="site-legal-copy">&copy; <span class="current-year">2026</span> Healthspend · 45 CFR § 180.50</p>
   </footer>
 
   <script type="module" src="/src/main.ts"></script>

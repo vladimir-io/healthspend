@@ -8,15 +8,17 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "search:check": "node scripts/search_regression_check.mjs",
-    "test:turbolite": "node scripts/turbolite_integration_test.mjs"
+    "test:turbolite": "node scripts/turbolite_integration_test.mjs",
+    "test:perf": "playwright test",
+    "test:perf:ui": "playwright test --ui"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "sqlite3": "^6.0.1",
     "typescript": "^5.2.2",
     "vite": "^4.5.14"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.82",
     "sql.js-httpvfs": "^0.8.12",
     "turbolite": "0.2.19"
   }

@@ -1,0 +1,88 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/frontend-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  build-and-search-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Fetch audit database for search regression
+        working-directory: .
+        run: |
+          mkdir -p web/public
+          if [ ! -f web/public/audit_data.db ]; then
+            wget -q -O web/public/audit_data.db \
+              https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db || true
+          fi
+
+      - name: Search regression check
+        if: hashFiles('web/public/audit_data.db') != ''
+        run: npm run search:check
+
+  playwright-perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: build-and-search-check
+    defaults:
+      run:
+        working-directory: web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium --with-deps
+
+      - name: Fetch audit database
+        working-directory: .
+        run: |
+          mkdir -p web/public
+          if [ ! -f web/public/audit_data.db ]; then
+            wget -q -O web/public/audit_data.db \
+              https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db || true
+          fi
+          if [ -f web/public/audit_data.db ]; then
+            python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db || true
+          fi
+
+      - name: Run perf budget tests
+        run: npm run test:perf
+        env:
+          CI: 'true'

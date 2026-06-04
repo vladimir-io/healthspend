@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#050507" id="meta-theme-color" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Developers | Healthspend</title>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #050507;
+      --card: #0d0d10;
+      --card-2: #121218;
+      --text: #f0f0f2;
+      --muted: #9494a0;
+      --border: rgba(255, 255, 255, 0.1);
+      --accent: #ff6000;
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    :root[data-theme='light'] {
+      color-scheme: light;
+      --bg: #f4f4f7;
+      --card: #ffffff;
+      --card-2: #f0f1f4;
+      --text: #121218;
+      --muted: #4a4a56;
+      --border: rgba(0, 0, 0, 0.08);
+      --accent: #e55500;
+      --shadow: 0 8px 28px rgba(0, 0, 0, 0.08);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(ellipse 60% 40% at 20% 0%, rgba(255, 96, 0, 0.06), transparent 50%);
+      pointer-events: none;
+    }
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 20px 24px 0;
+    }
+    .top a { color: var(--muted); text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+    .top a:hover { color: var(--text); }
+    #theme-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    main { max-width: 720px; margin: 0 auto; padding: 24px 24px 80px; }
+    h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0 0 12px; font-weight: 800; }
+    .lede { color: var(--muted); margin-bottom: 32px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 22px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    h2 { font-size: 1.05rem; margin: 0 0 8px; }
+    a { color: var(--accent); }
+    code { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-size: 0.85em; }
+    .eyebrow {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <a href="/">← Healthspend</a>
+    <button type="button" id="theme-btn" aria-label="Toggle theme">Theme</button>
+  </div>
+  <main>
+    <p class="eyebrow">For builders &amp; researchers</p>
+    <h1>Data access</h1>
+    <p class="lede">Healthspend is a patient-first hospital price transparency app. Programmatic access uses static artifacts — there is no live query API in the product UI.</p>
+
+    <section class="card">
+      <h2>SQLite datasets</h2>
+      <p>Download from <a href="https://huggingface.co/datasets/vladimir-io/healthspend-data" target="_blank" rel="noopener">Hugging Face</a>. See <code>dataset_manifest.json</code> in that repo for row counts.</p>
+      <ul>
+        <li><code>audit_data.db</code> — hospital registry, compliance scores, and all ingested price rows</li>
+        <li><code>audit_hot.db</code> — same registry/compliance; prices limited to 16 high-traffic CPT codes for fast browser search</li>
+      </ul>
+    </section>
+
+    <section class="card">
+      <h2>Static hospital nodes</h2>
+      <p>Per-hospital JSON: <code>/api/v1/nodes/{ccn}.json</code> (example: <a href="/api/v1/nodes/050001.json">050001</a>).</p>
+    </section>
+
+    <section class="card">
+      <h2>Source code</h2>
+      <p>Pipeline, schema, and UI: <a href="https://github.com/vladimir-io/healthspend" target="_blank" rel="noopener">github.com/vladimir-io/healthspend</a></p>
+    </section>
+  </main>
+  <script>
+    (function () {
+      var META = { dark: '#050507', light: '#f4f4f7' };
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-btn');
+      var meta = document.getElementById('meta-theme-color');
+      function apply(t) {
+        root.setAttribute('data-theme', t);
+        root.style.colorScheme = t;
+        localStorage.setItem('theme', t);
+        if (meta) meta.setAttribute('content', META[t] || META.dark);
+        if (btn) btn.textContent = t === 'light' ? 'Dark' : 'Light';
+      }
+      apply(localStorage.getItem('theme') === 'light' ? 'light' : 'dark');
+      btn && btn.addEventListener('click', function () {
+        apply(root.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+      });
+    })();
+  </script>
+</body>
+</html>

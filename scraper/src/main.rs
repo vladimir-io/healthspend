@@ -56,12 +56,24 @@ async fn main() -> anyhow::Result<()> {
     }
 
     if args.parse_only {
-        // Test files — these get swapped for real MRF paths in the matrix job
-        let csv_result = parser_csv::parse_csv_tall("data/test_mrf_tall.csv", "450056");
-        auditor::update_parse_result("450056", csv_result.mrf_machine_readable, csv_result.records_inserted)?;
+        let ci_state = std::env::var("HS_CI_STATE").unwrap_or_else(|_| "TX".into());
+        tracing::info!(state = %ci_state, "parse-only regression fixtures");
 
-        let json_result = parser_json::parse_json_streaming("data/test_mrf.json", "450358");
-        auditor::update_parse_result("450358", json_result.mrf_machine_readable, json_result.records_inserted)?;
+        let fixtures: [(&str, &str); 3] = [
+            ("data/test_mrf_tall.csv", "450056"),
+            ("data/test_mrf.json", "450358"),
+            ("data/contract_v3.json", "450001"),
+        ];
+
+        for (path, ccn) in fixtures {
+            let result = if path.ends_with(".csv") {
+                parser_csv::parse_csv_tall(path, ccn)
+            } else {
+                parser_json::parse_json_streaming(path, ccn)
+            };
+            auditor::update_parse_result(ccn, result.mrf_machine_readable, result.records_inserted)?;
+            tracing::info!(path, ccn, inserted = result.records_inserted, "fixture parsed");
+        }
 
         ran_something = true;
     }

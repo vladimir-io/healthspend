@@ -1,5 +1,6 @@
 import { createDbWorker } from 'sql.js-httpvfs';
-import { DB_VFS_ADAPTER } from './config';
+import { DB_URL, DB_URL_CHAIN, DB_VFS_ADAPTER } from './config';
+import { recordRum } from './rum';
 
 const workerUrl = new URL('sql.js-httpvfs/dist/sqlite.worker.js', import.meta.url);
 const wasmUrl   = new URL('sql.js-httpvfs/dist/sql-wasm.wasm', import.meta.url);
@@ -42,10 +43,30 @@ async function openWorker(dbUrl: string, chunkSize: number) {
   };
 }
 
-export async function getSharedWorker(dbUrl: string, chunkSize: number = 65536) {
-  const key = `${DB_VFS_ADAPTER}:${dbUrl}:${chunkSize}`;
-  if (!pool.has(key)) {
-    pool.set(key, await openWorker(dbUrl, chunkSize));
+export async function getSharedWorker(dbUrl: string = DB_URL, chunkSize: number = 262144) {
+  const chain = dbUrl === DB_URL ? DB_URL_CHAIN : [dbUrl];
+  let lastError: unknown;
+  for (const url of chain) {
+    const key = `${DB_VFS_ADAPTER}:${url}:${chunkSize}`;
+    if (pool.has(key)) return pool.get(key);
+    try {
+      const t0 = performance.now();
+      const instance = await openWorker(url, chunkSize);
+      pool.set(key, instance);
+      recordRum({
+        name: 'db_warm',
+        ms: performance.now() - t0,
+        meta: { tier: url.includes('audit_hot') ? 'hot' : 'full' },
+      });
+      return instance;
+    } catch (err) {
+      lastError = err;
+    }
   }
-  return pool.get(key);
+  throw lastError ?? new Error('Failed to open database');
+}
+
+/** Prefetch worker + SQLite on search focus (non-blocking). */
+export function prefetchDatabase(dbUrl: string = DB_URL): void {
+  void getSharedWorker(dbUrl).then((w) => w.db.query('SELECT 1')).catch(() => undefined);
 }

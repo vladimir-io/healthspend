@@ -1,0 +1,151 @@
+/* Healthspend design tokens — dark (default) & light */
+
+:root {
+  color-scheme: dark;
+
+  --bg-body: #050507;
+  --bg-deep: #050507;
+  --bg-card: #0d0d10;
+  --bg-card-2: #121218;
+  --bg-card-hover: #18181f;
+  --bg-nav: rgba(5, 5, 7, 0.88);
+
+  --text-primary: #f0f0f2;
+  --text-secondary: #9494a0;
+  --text-tertiary: #5c5c68;
+
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --border-medium: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.22);
+
+  --yc-orange: #ff6000;
+  --yc-orange-hover: #e55500;
+  --yc-orange-glow: rgba(255, 96, 0, 0.2);
+  --on-primary: #ffffff;
+
+  --rh-green: #00c805;
+  --rh-green-dim: #00a804;
+  --rh-green-glow: rgba(0, 200, 5, 0.14);
+
+  --red: #e85d5d;
+  --red-glow: rgba(232, 93, 93, 0.1);
+  --amber: #e5a020;
+  --amber-glow: rgba(229, 160, 32, 0.1);
+
+  --gold: #e8c547;
+  --gold-glow: rgba(232, 197, 71, 0.14);
+  --gold-border: rgba(184, 134, 11, 0.35);
+
+  --violation: var(--yc-orange);
+  --overlay-bg: rgba(5, 5, 7, 0.92);
+  --scrim: rgba(5, 5, 7, 0.55);
+
+  --surface-inset: rgba(255, 255, 255, 0.03);
+  --ambient-orange: rgba(255, 96, 0, 0.045);
+  --ambient-green: rgba(0, 200, 5, 0.03);
+  --grid-dot: rgba(255, 255, 255, 0.035);
+  --focus-glow: rgba(255, 255, 255, 0.06);
+  --scrollbar-thumb: rgba(140, 140, 150, 0.2);
+
+  --green-muted: rgba(0, 200, 5, 0.1);
+  --orange-muted: rgba(255, 96, 0, 0.1);
+  --red-muted: rgba(232, 93, 93, 0.1);
+  --fallback-bg: rgba(255, 165, 0, 0.12);
+  --fallback-border: rgba(255, 165, 0, 0.28);
+
+  --paper-bg: #fafaf8;
+  --paper-text: #141416;
+  --paper-shadow: rgba(0, 0, 0, 0.35);
+
+  --price-high: #e85d5d;
+  --price-low: #00c805;
+  --price-high-bg: rgba(232, 93, 93, 0.08);
+  --price-low-bg: rgba(0, 200, 5, 0.08);
+  --price-high-border: rgba(232, 93, 93, 0.28);
+  --price-low-border: rgba(0, 200, 5, 0.28);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 1px 2px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 32px 80px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
+  --shadow-hover: 0 12px 40px rgba(0, 0, 0, 0.45), 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.4);
+
+  --font-sans: 'Inter', -apple-system, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Fira Mono', monospace;
+  --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg-body: #f4f4f7;
+  --bg-deep: #eeeff3;
+  --bg-card: #ffffff;
+  --bg-card-2: #f5f5f8;
+  --bg-card-hover: #ebebef;
+  --bg-nav: #f4f4f7;
+
+  --text-primary: #121218;
+  --text-secondary: #4a4a56;
+  --text-tertiary: #8a8a96;
+
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.16);
+
+  --yc-orange-glow: rgba(255, 96, 0, 0.14);
+  --rh-green: #00a804;
+  --rh-green-dim: #008803;
+  --rh-green-glow: rgba(0, 168, 4, 0.1);
+
+  --red: #c93c3c;
+  --red-glow: rgba(201, 60, 60, 0.08);
+  --amber: #c47f08;
+  --amber-glow: rgba(196, 127, 8, 0.08);
+
+  --gold: #9a7209;
+  --gold-glow: rgba(154, 114, 9, 0.12);
+  --gold-border: rgba(154, 114, 9, 0.35);
+
+  --overlay-bg: rgba(244, 244, 247, 0.94);
+  --scrim: rgba(18, 18, 24, 0.35);
+
+  --surface-inset: rgba(0, 0, 0, 0.03);
+  --ambient-orange: rgba(255, 96, 0, 0.07);
+  --ambient-green: rgba(0, 168, 4, 0.05);
+  --grid-dot: rgba(0, 0, 0, 0.045);
+  --focus-glow: rgba(255, 96, 0, 0.1);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.14);
+
+  --green-muted: rgba(0, 168, 4, 0.08);
+  --orange-muted: rgba(255, 96, 0, 0.08);
+  --red-muted: rgba(201, 60, 60, 0.08);
+  --fallback-bg: rgba(255, 140, 0, 0.1);
+  --fallback-border: rgba(255, 120, 0, 0.25);
+
+  --paper-bg: #ffffff;
+  --paper-text: #141416;
+  --paper-shadow: rgba(0, 0, 0, 0.08);
+
+  --price-high: #c93c3c;
+  --price-low: #008803;
+  --price-high-bg: rgba(201, 60, 60, 0.06);
+  --price-low-bg: rgba(0, 168, 4, 0.06);
+  --price-high-border: rgba(201, 60, 60, 0.22);
+  --price-low-border: rgba(0, 168, 4, 0.22);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.06);
+  --shadow-modal: 0 24px 64px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 12px 32px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 16px 40px rgba(0, 0, 0, 0.08);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}

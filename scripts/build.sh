@@ -160,6 +160,14 @@ if ! python3 "$SCRIPTS_DIR/validate_database.py" "$WEB_PUBLIC/audit_data.db"; th
 fi
 log_success "audit_data.db validation passed"
 
+# Phase 7b: Hot shard for fast client loads
+log_step "Building audit_hot.db shard..."
+if python3 "$SCRIPTS_DIR/build_hot_db.py" --source "$WEB_PUBLIC/audit_data.db" --out "$WEB_PUBLIC/audit_hot.db"; then
+    log_success "Hot shard ready"
+else
+    log_warning "Hot shard build skipped or failed"
+fi
+
 # Phase 8: Generate metadata manifest
 log_step "Phase 8: Generating data manifest..."
 cat > "$WEB_PUBLIC/data_manifest.json" << EOF

@@ -124,16 +124,19 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
             conn.prepare("SELECT ccn, website, cms_hpt_url FROM hospitals")?
         };
 
-        let iter = stmt.query_map(
-            rusqlite::params![state_filter.as_ref().map(|s| s.to_uppercase())],
-            |row| {
-                Ok((
-                    row.get::<_, String>(0)?,
-                    row.get::<_, String>(1)?,
-                    row.get::<_, String>(2)?,
-                ))
-            }
-        )?;
+        let to_row = |row: &rusqlite::Row<'_>| -> rusqlite::Result<(String, String, String)> {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        };
+
+        let iter = if let Some(state) = state_filter.as_ref() {
+            stmt.query_map(rusqlite::params![state.to_uppercase()], to_row)?
+        } else {
+            stmt.query_map([], to_row)?
+        };
         for row in iter {
             hospitals_to_audit.push(row?);
         }
