@@ -10,10 +10,7 @@ export async function preloadEngine(onProgress?: (text: string) => void): Promis
     if (engineCache) return engineCache;
     if (initPromise) return initPromise;
 
-    if (!(navigator as any).gpu) {
-        console.warn("WebGPU not supported. Defaulting to deterministic templates.");
-        return null;
-    }
+    if (!(navigator as any).gpu) return null;
 
     initPromise = (async () => {
         try {
@@ -24,8 +21,7 @@ export async function preloadEngine(onProgress?: (text: string) => void): Promis
             });
             engineCache = engine;
             return engine;
-        } catch (e) {
-            console.error("WebLLM Allocation Failed:", e);
+        } catch {
             return null;
         } finally {
             initPromise = null;
@@ -90,8 +86,7 @@ Govern yourselves accordingly.`;
         const output = result.choices[0].message.content;
         return output ? output.trim() : deterministicFallback;
 
-    } catch (e) {
-        console.error("WebLLM Generation Error:", e);
+    } catch {
         return deterministicFallback;
     } finally {
         isGenerating = false;

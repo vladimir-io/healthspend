@@ -121,8 +121,7 @@ export function renderIncidents(containerId: string) {
             apiFooter.innerHTML = `Need this feed as a structured API? &nbsp;&middot;&nbsp; <strong>Use the Healthspend API</strong>`;
             apiFooter.onclick = () => window.location.hash = 'api';
             feed.appendChild(apiFooter);
-        } catch (e) {
-            console.error(e);
+        } catch {
             feed.innerHTML = `<div style="padding:40px;text-align:center;color:var(--yc-orange);">Audit engine error. Please reload.</div>`;
         }
     };

@@ -54,7 +54,15 @@ healthspend/
 - Python 3.11+
 - SQLite CLI (recommended for local inspection)
 
-### 1) Run the web app
+### 1) Obtain the Data
+Because `audit_data.db` is an extremely large binary dataset, it is not checked into this git repository directly. You must fetch the latest baseline from our Hugging Face dataset before running the application logic:
+
+```bash
+mkdir -p web/public
+wget -O web/public/audit_data.db https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db
+```
+
+### 2) Run the web app
 
 ```bash
 cd web
@@ -62,7 +70,7 @@ npm install
 npm run dev
 ```
 
-### 2) Build scraper locally
+### 3) Build scraper locally
 
 ```bash
 cd scraper
@@ -70,7 +78,7 @@ cargo check
 cargo run --release -- --help
 ```
 
-### 3) Ingest CMS metadata locally
+### 4) Ingest CMS metadata locally
 
 From the repository root:
 
