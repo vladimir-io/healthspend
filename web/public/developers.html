@@ -5,7 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#050507" id="meta-theme-color" />
   <meta name="color-scheme" content="dark light" />
-  <title>Developers | Healthspend</title>
+  <meta name="description" content="Machine-readable hospital price data for agents, researchers, and developers. Static JSON API, SQLite datasets, llms.txt guide." />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href="https://healthspend.lol/developers.html" />
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM site guide" />
+  <title>Developers &amp; Agents | Healthspend</title>
   <link rel="icon" href="/favicon.ico" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -41,14 +45,6 @@
       color: var(--text);
       line-height: 1.6;
       transition: background 0.4s ease, color 0.4s ease;
-    }
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      z-index: -1;
-      background: radial-gradient(ellipse 60% 40% at 20% 0%, rgba(255, 96, 0, 0.06), transparent 50%);
-      pointer-events: none;
     }
     .top {
       display: flex;
@@ -92,6 +88,8 @@
       color: var(--accent);
       font-weight: 700;
     }
+    ul { margin: 8px 0; padding-left: 20px; color: var(--muted); }
+    li { margin-bottom: 6px; }
   </style>
 </head>
 <body>
@@ -100,27 +98,48 @@
     <button type="button" id="theme-btn" aria-label="Toggle theme">Theme</button>
   </div>
   <main>
-    <p class="eyebrow">For builders &amp; researchers</p>
+    <p class="eyebrow">For agents, builders &amp; researchers</p>
     <h1>Data access</h1>
-    <p class="lede">Healthspend is a patient-first hospital price transparency app. Programmatic access uses static artifacts — there is no live query API in the product UI.</p>
+    <p class="lede">Healthspend publishes hospital cash rates from CMS transparency filings. Use static JSON endpoints (no API key) or download SQLite datasets.</p>
 
     <section class="card">
-      <h2>SQLite datasets</h2>
-      <p>Download from <a href="https://huggingface.co/datasets/vladimir-io/healthspend-data" target="_blank" rel="noopener">Hugging Face</a>. See <code>dataset_manifest.json</code> in that repo for row counts.</p>
+      <h2>AI agent onboarding</h2>
       <ul>
-        <li><code>audit_data.db</code> — hospital registry, compliance scores, and all ingested price rows</li>
-        <li><code>audit_hot.db</code> — same registry/compliance; prices limited to 16 high-traffic CPT codes for fast browser search</li>
+        <li><a href="/llms.txt">llms.txt</a> — concise site guide for LLMs</li>
+        <li><a href="/llms-full.txt">llms-full.txt</a> — extended documentation</li>
+        <li><a href="/ai.txt">ai.txt</a> — AI access policy</li>
+        <li><a href="/api/v1/manifest.json">manifest.json</a> — machine-readable endpoint index</li>
       </ul>
     </section>
 
     <section class="card">
-      <h2>Static hospital nodes</h2>
-      <p>Per-hospital JSON: <code>/api/v1/nodes/{ccn}.json</code> (example: <a href="/api/v1/nodes/050001.json">050001</a>).</p>
+      <h2>Static JSON API</h2>
+      <ul>
+        <li><code>GET /api/v1/nodes/{ccn}.json</code> — <a href="/api/v1/nodes/010001.json">example</a></li>
+        <li><code>GET /api/v1/procedures.json</code> — <a href="/api/v1/procedures.json">CPT index</a></li>
+        <li><code>GET /embed/data/{state}.json</code> — <a href="/embed/data/ca.json">CA example</a></li>
+      </ul>
+      <p style="margin:12px 0 0;color:var(--muted);font-size:0.9rem;">Full docs: <a href="/api/v1/documentation.html">API documentation</a></p>
+    </section>
+
+    <section class="card">
+      <h2>Search deep links</h2>
+      <p style="color:var(--muted);margin:0 0 8px;">Interactive browser search (JavaScript required):</p>
+      <code>https://healthspend.lol/?q=MRI&amp;state=CA#search</code>
+    </section>
+
+    <section class="card">
+      <h2>SQLite datasets</h2>
+      <p style="color:var(--muted);margin:0 0 8px;">Download from <a href="https://huggingface.co/datasets/vladimir-io/healthspend-data" target="_blank" rel="noopener">Hugging Face</a>.</p>
+      <ul>
+        <li><code>audit_data.db</code> — full price ledger</li>
+        <li><code>audit_hot.db</code> — 16 CPT hot shard for browser search</li>
+      </ul>
     </section>
 
     <section class="card">
       <h2>Source code</h2>
-      <p>Pipeline, schema, and UI: <a href="https://github.com/vladimir-io/healthspend" target="_blank" rel="noopener">github.com/vladimir-io/healthspend</a></p>
+      <p style="margin:0;color:var(--muted);"><a href="https://github.com/vladimir-io/healthspend" target="_blank" rel="noopener">github.com/vladimir-io/healthspend</a></p>
     </section>
   </main>
   <script>

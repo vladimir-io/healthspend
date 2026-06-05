@@ -1,4 +1,4 @@
-const CACHE = 'healthspend-v5';
+const CACHE = 'healthspend-v6';
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE));

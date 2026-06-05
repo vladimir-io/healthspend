@@ -27,26 +27,89 @@
   <meta name="twitter:image" content="https://healthspend.lol/og-image.png" />
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1" />
   <link rel="canonical" href="https://healthspend.lol/" />
+  <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM site guide" />
+  <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
   <title>Healthspend — Compare hospital prices</title>
 
   <script id="ld-json" type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Dataset",
-    "name": "Healthspend US Hospital Pricing Ledger",
-    "description": "Federally audited cash rates and negotiated pricing for 7,400+ hospitals across the US, updated for the 2026 CMS Price Transparency mandate.",
-    "url": "https://healthspend.lol",
-    "isAccessibleForFree": true,
-    "creator": {
-      "@type": "Organization",
-      "name": "Healthspend"
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Healthspend",
+      "alternateName": "Healthspend Hospital Price Compare",
+      "url": "https://healthspend.lol",
+      "description": "Compare published hospital cash rates from 7,400+ US hospitals under CMS price transparency rules.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://healthspend.lol/?q={search_term_string}#search"
+        },
+        "query-input": "required name=search_term_string"
+      }
     },
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://healthspend.lol/#search?q={search_term_string}",
-      "query-input": "required name=search_term_string"
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Healthspend",
+      "url": "https://healthspend.lol",
+      "logo": "https://healthspend.lol/og-image.png",
+      "sameAs": ["https://github.com/vladimir-io/healthspend"]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Dataset",
+      "name": "Healthspend US Hospital Pricing Ledger",
+      "description": "Published cash rates and transparency compliance scores for 7,400+ US hospitals from CMS machine-readable price files.",
+      "url": "https://healthspend.lol",
+      "isAccessibleForFree": true,
+      "keywords": ["hospital prices", "cash rate", "CMS price transparency", "CPT code", "medical bill"],
+      "creator": { "@type": "Organization", "name": "Healthspend" },
+      "distribution": [
+        {
+          "@type": "DataDownload",
+          "contentUrl": "https://healthspend.lol/api/v1/manifest.json",
+          "encodingFormat": "application/json"
+        },
+        {
+          "@type": "DataDownload",
+          "contentUrl": "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_hot.db",
+          "encodingFormat": "application/x-sqlite3"
+        }
+      ]
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I compare hospital prices on Healthspend?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Search a procedure name or CPT code at healthspend.lol. Add a state filter for local results. Prices are published cash rates from each hospital's CMS transparency filing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is a hospital cash rate?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A cash rate is the price a hospital publishes for patients paying without insurance, as required by the CMS Hospital Price Transparency Rule (45 CFR Part 180)."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I challenge a medical bill above the posted price?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Healthspend lets you email hospitals using the published cash rate as a reference. Open Use this rate on any search result for a pre-filled message template."
+          }
+        }
+      ]
     }
-  }
+  ]
   </script>
 
   <link rel="icon" type="image/x-icon" href="/favicon.ico" />

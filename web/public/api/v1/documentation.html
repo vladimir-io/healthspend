@@ -3,180 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infrastructure Access | Healthspend Developer API</title>
-    <meta name="description" content="Automated clinical price discovery, market context aggregation, and programmatic enforcement triggers.">
+    <title>API &amp; Data Access | Healthspend</title>
+    <meta name="description" content="Machine-readable hospital price data for agents, researchers, and developers. Static JSON endpoints — no API key required.">
+    <meta name="robots" content="index,follow">
+    <link rel="canonical" href="https://healthspend.lol/api/v1/documentation.html">
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM site guide">
     <style>
-        :root { 
-            --yc-orange: #FF6000; 
-            --bg: #050505; 
-            --card-bg: #0A0A0A; 
-            --border: #1a1a1a; 
-            --text-primary: #fff;
-            --text-secondary: #888;
-            --font-mono: 'IBM Plex Mono', monospace;
-        }
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=IBM+Plex+Mono:wght@500;700&display=swap');
-        
+        :root { --orange: #FF6000; --bg: #050505; --card: #0A0A0A; --border: #1a1a1a; --muted: #888; --mono: 'IBM Plex Mono', ui-monospace, monospace; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=IBM+Plex+Mono:wght@500;700&display=swap');
         * { box-sizing: border-box; }
-        body { 
-            font-family: 'Inter', -apple-system, sans-serif; 
-            background: var(--bg); color: var(--text-primary); margin: 0; padding: 80px 24px;
-            line-height: 1.6; -webkit-font-smoothing: antialiased;
-        }
-        
-        /* Sleek Scrollbar */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--yc-orange); }
-        * { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.1) transparent; }
-
-        .container { max-width: 900px; margin: 0 auto; }
-        .eyebrow { 
-            color: var(--yc-orange); font-family: var(--font-mono); font-weight: 700; 
-            text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.4em; margin-bottom: 24px; display: block;
-        }
-        h1 { font-size: clamp(2.5rem, 8vw, 4.5rem); font-weight: 900; letter-spacing: -0.05em; margin: 0 0 16px; line-height: 1; }
-        .lead { font-size: 1.25rem; color: var(--text-secondary); max-width: 600px; margin-bottom: 80px; }
-        
-        .endpoint-card { 
-            background: var(--card-bg); border: 1px solid var(--border); border-radius: 20px; 
-            padding: 40px; margin-bottom: 40px; transition: border-color 0.2s;
-        }
-        .endpoint-card:hover { border-color: #333; }
-        
-        .method-badge { 
-            font-family: var(--font-mono); font-weight: 800; font-size: 0.85rem; 
-            color: var(--yc-orange); margin-bottom: 12px; display: block;
-        }
-        .endpoint-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 12px; letter-spacing: -0.02em; }
-        .endpoint-desc { color: var(--text-secondary); margin-bottom: 32px; font-size: 1rem; }
-        
-        .sub-header { 
-            font-family: var(--font-mono); text-transform: uppercase; color: #444; 
-            font-size: 0.65rem; font-weight: 800; letter-spacing: 0.2em; margin-bottom: 16px; display: block;
-        }
-        
-        .code-block { 
-            background: #000; border: 1px solid #111; border-radius: 12px; padding: 24px; 
-            font-family: var(--font-mono); font-size: 0.85rem; color: #eee; overflow-x: auto; margin-bottom: 24px;
-        }
-        .param-list { margin-bottom: 24px; }
-        .param-item { display: flex; border-bottom: 1px solid #111; padding: 12px 0; gap: 20px; align-items: flex-start; }
-        .param-name { font-family: var(--font-mono); color: var(--yc-orange); font-weight: 700; width: 80px; flex-shrink: 0; }
-        .param-info { font-size: 0.85rem; color: #777; }
-        
-        .db-access { 
-            background: linear-gradient(135deg, #FF6000 0%, #D95200 100%); 
-            padding: 32px; border-radius: 20px; color: #fff; text-align: center; margin-top: 80px;
-        }
-        .db-title { font-weight: 900; font-size: 1.25rem; margin-bottom: 8px; }
-        .db-url { font-family: var(--font-mono); font-weight: 700; background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; display: inline-block; margin-top: 12px; }
-
-        .footer { 
-            display: flex; justify-content: center; gap: 32px; margin-top: 80px; 
-            padding-top: 40px; border-top: 1px solid var(--border);
-            font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; font-weight: 800; letter-spacing: 0.1em;
-        }
-        .footer a { color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
-        .footer a:hover { color: var(--yc-orange); }
+        body { font-family: Inter, system-ui, sans-serif; background: var(--bg); color: #fff; margin: 0; padding: 64px 24px; line-height: 1.6; }
+        .wrap { max-width: 880px; margin: 0 auto; }
+        .eyebrow { color: var(--orange); font-family: var(--mono); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; }
+        h1 { font-size: clamp(2rem, 6vw, 3.2rem); font-weight: 800; letter-spacing: -0.04em; margin: 12px 0; }
+        .lead { color: var(--muted); font-size: 1.1rem; max-width: 640px; margin-bottom: 48px; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 28px; margin-bottom: 24px; }
+        .method { font-family: var(--mono); color: var(--orange); font-weight: 700; font-size: 0.8rem; }
+        h2 { font-size: 1.25rem; margin: 0 0 8px; }
+        p { color: var(--muted); margin: 0 0 16px; }
+        pre { background: #000; border: 1px solid #111; border-radius: 10px; padding: 16px; overflow-x: auto; font-family: var(--mono); font-size: 0.82rem; color: #ddd; margin: 12px 0; }
+        a { color: var(--orange); }
+        .nav { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 48px; font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; }
+        .nav a { color: var(--muted); text-decoration: none; }
+        .nav a:hover { color: var(--orange); }
+        .note { background: rgba(255,96,0,0.08); border: 1px solid rgba(255,96,0,0.2); border-radius: 10px; padding: 14px 18px; font-size: 0.9rem; color: #ccc; margin-bottom: 32px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <span class="eyebrow">Infrastructure Access &middot; V1.0</span>
-        <h1>Developer API</h1>
-        <p class="lead">Automated price discovery, market context aggregation, and programmatic enforcement triggers for your medical bill negotiation platforms.</p>
+    <div class="wrap">
+        <span class="eyebrow">Static JSON API · v1</span>
+        <h1>Data access for agents &amp; developers</h1>
+        <p class="lead">Healthspend exposes machine-readable hospital prices without API keys. All endpoints below are static files — no live query server.</p>
 
-        <!-- SEARCH ENDPOINT -->
-        <div class="endpoint-card">
-            <span class="method-badge">GET /API/V1/SEARCH</span>
-            <div class="endpoint-title">Audit Ledger Search</div>
-            <p class="endpoint-desc">Execute deep-audits against the global pricing index. Supports semantic procedure queries, CPT codes, and strict geospatial boundaries.</p>
-            
-            <span class="sub-header">Parameters</span>
-            <div class="param-list">
-                <div class="param-item">
-                    <span class="param-name">q</span>
-                    <span class="param-info">Query string (e.g. "knee replacement")</span>
-                </div>
-                <div class="param-item">
-                    <span class="param-name">zip</span>
-                    <span class="param-info">Origin US Zip Code (Optional)</span>
-                </div>
-                <div class="param-item">
-                    <span class="param-name">radius</span>
-                    <span class="param-info">Search radius in miles (Optional, default: 25)</span>
-                </div>
-            </div>
-
-            <span class="sub-header">Shell &middot; Curl</span>
-            <div class="code-block">
-                curl "https://healthspend.lol/api/v1/search?q=knee+replacement&zip=90210&radius=20"
-            </div>
+        <div class="note">
+            <strong>For AI agents:</strong> start with <a href="/llms.txt">llms.txt</a> or <a href="/api/v1/manifest.json">manifest.json</a>.
+            Interactive search uses the browser app: <code>/?q={procedure}&amp;state={XX}#search</code>
         </div>
 
-        <!-- RATES ENDPOINT -->
-        <div class="endpoint-card">
-            <span class="method-badge">GET /API/V1/RATES</span>
-            <div class="endpoint-title">Market Context Aggregation</div>
-            <p class="endpoint-desc">Retrieve the statistical cash-rate spread for a specific procedure within a defined market to instantly identify predatory billing.</p>
-            
-            <span class="sub-header">Response &middot; JSON</span>
-            <div class="code-block">
-{
-  "cpt_code": "27447",
-  "market_zip": "90210",
-  "radius_miles": 20,
-  "cash_rate": {
-    "min": 12500.00,
-    "median": 18200.00,
-    "max": 45000.00
-  }
-}
-            </div>
+        <div class="card">
+            <span class="method">GET /api/v1/manifest.json</span>
+            <h2>Site manifest</h2>
+            <p>Machine-readable index of endpoints, datasets, search URL templates, and agent guides.</p>
+            <pre>curl https://healthspend.lol/api/v1/manifest.json</pre>
         </div>
 
-        <!-- DISPUTE ENDPOINT -->
-        <div class="endpoint-card">
-            <span class="method-badge">POST /API/V1/DISPUTE</span>
-            <div class="endpoint-title">Programmatic Enforcement</div>
-            <p class="endpoint-desc">Generate a legally formatted, deterministic debt dispute letter using a specific hospital's published federal pricing data.</p>
-            
-            <span class="sub-header">Request Body</span>
-            <div class="code-block">
-{
-  "hospital_ccn": "050001",
-  "cpt_code": "70551"
-}
-            </div>
+        <div class="card">
+            <span class="method">GET /api/v1/procedures.json</span>
+            <h2>Procedure index</h2>
+            <p>Common CPT codes with plain-language names and search deep links.</p>
+            <pre>curl https://healthspend.lol/api/v1/procedures.json</pre>
         </div>
 
-        <!-- COMPLIANCE ENDPOINT -->
-        <div class="endpoint-card">
-            <span class="method-badge">GET /API/V1/COMPLIANCE</span>
-            <div class="endpoint-title">Hospital Compliance Matrix</div>
-            <p class="endpoint-desc">Retrieve the authoritative compliance score and specific violation evidence for any hospital identified by its CMS Certification Number (CCN).</p>
-            
-            <span class="sub-header">Response &middot; JSON</span>
-            <div class="code-block">
-{
-  "ccn": "050001",
-  "score": 100,
-  "status": "VERIFIED COMPLIANT"
-}
-            </div>
+        <div class="card">
+            <span class="method">GET /api/v1/nodes/{ccn}.json</span>
+            <h2>Hospital price node</h2>
+            <p>Published cash rates for one hospital. <code>{ccn}</code> = 6-digit CMS Certification Number.</p>
+            <pre>curl https://healthspend.lol/api/v1/nodes/010001.json</pre>
+            <pre>{
+  "ccn": "010001",
+  "name": "SOUTHEAST HEALTH MEDICAL CENTER",
+  "location": { "city": "DOTHAN", "state": "AL" },
+  "updated": "2026-04-07",
+  "prices": [
+    { "code": "80053", "desc": "Comprehensive Metabolic Panel", "price": 378.0 }
+  ]
+}</pre>
         </div>
 
-        <div class="db-access">
-            <div class="db-title">Direct Open-Data Access</div>
-            <p style="margin-bottom:0; opacity:0.9;">The raw SQLite clinical data ledger is updated nightly and available at:</p>
-            <div class="db-url">/audit_data.db</div>
+        <div class="card">
+            <span class="method">GET /embed/data/{state}.json</span>
+            <h2>State price samples</h2>
+            <p>Lowest published sample per procedure for each US state. <code>{state}</code> = lowercase 2-letter code.</p>
+            <pre>curl https://healthspend.lol/embed/data/ca.json</pre>
         </div>
 
-        <div class="footer">
-            <a href="https://github.com/vladimir-io/healthspend" target="_blank">Github</a>
-            <a href="https://www.cms.gov/hospital-price-transparency" target="_blank">Federal Mandate</a>
+        <div class="card">
+            <span class="method">GET /visibility/node-{ccn}.html</span>
+            <h2>Hospital SEO pages</h2>
+            <p>Static HTML with schema.org MedicalProcedure JSON-LD. 5,400+ hospital pages in <a href="/sitemap.xml">sitemap.xml</a>.</p>
+            <pre>https://healthspend.lol/visibility/node-010001.html</pre>
+        </div>
+
+        <div class="card">
+            <span class="method">DOWNLOAD</span>
+            <h2>SQLite bulk datasets</h2>
+            <p>Full price ledger and hot search shard on HuggingFace.</p>
+            <pre>audit_hot.db  — 16 CPT codes, browser search shard
+audit_data.db — full ingested price rows
+https://huggingface.co/datasets/vladimir-io/healthspend-data</pre>
+        </div>
+
+        <div class="nav">
+            <a href="/llms.txt">llms.txt</a>
+            <a href="/llms-full.txt">llms-full.txt</a>
+            <a href="/developers.html">Developers</a>
+            <a href="/">App</a>
+            <a href="https://github.com/vladimir-io/healthspend">GitHub</a>
         </div>
     </div>
 </body>
