@@ -1,4 +1,4 @@
-const CACHE = 'healthspend-v3';
+const CACHE = 'healthspend-v4';
 const PRECACHE = ['/sql-wasm.wasm'];
 
 self.addEventListener('install', (event) => {

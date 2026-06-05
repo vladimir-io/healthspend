@@ -41,6 +41,10 @@ export function setupMicroInteractions(): void {
   setupHeroJourneyCards();
   setupButtonPress();
   setupSheetEscape();
+  setupShortcutTags();
+  setupSearchIconPulse();
+  setupTrustCapsules();
+  setupNavTabMotion();
 }
 
 function setupHeroJourneyCards(): void {
@@ -56,10 +60,13 @@ function setupHeroJourneyCards(): void {
 }
 
 function setupButtonPress(): void {
+  const PRESSABLE =
+    '.btn, .brutalist-action, .load-more-button, .hero-journey-card, .shortcut-tag, .help-fab, .help-tip__action, .nav-tab, .bottom-nav-item';
+
   document.addEventListener(
     'click',
     (e) => {
-      const btn = (e.target as HTMLElement).closest('.btn, .brutalist-action, .load-more-button, .hero-journey-card');
+      const btn = (e.target as HTMLElement).closest(PRESSABLE);
       if (!btn || prefersReducedMotion()) return;
       btn.classList.add('is-pressed');
       window.setTimeout(() => btn.classList.remove('is-pressed'), 140);
@@ -72,5 +79,41 @@ function setupSheetEscape(): void {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
     closeAllSheets();
+  });
+}
+
+function setupShortcutTags(): void {
+  document.querySelectorAll('.shortcut-tag').forEach((tag) => {
+    tag.addEventListener('click', () => {
+      document.querySelectorAll('.shortcut-tag').forEach((t) => t.classList.remove('is-active'));
+      tag.classList.add('is-active');
+      window.setTimeout(() => tag.classList.remove('is-active'), 600);
+    });
+  });
+}
+
+function setupSearchIconPulse(): void {
+  const input = document.getElementById('search-input');
+  const icon = document.getElementById('search-icon');
+  if (!input || !icon || prefersReducedMotion()) return;
+
+  input.addEventListener('focus', () => icon.classList.add('is-pulsing'));
+  input.addEventListener('blur', () => icon.classList.remove('is-pulsing'));
+}
+
+function setupTrustCapsules(): void {
+  document.querySelectorAll('.trust-capsule').forEach((el) => {
+    el.addEventListener('mouseenter', () => el.classList.add('is-hovered'));
+    el.addEventListener('mouseleave', () => el.classList.remove('is-hovered'));
+  });
+}
+
+function setupNavTabMotion(): void {
+  document.querySelectorAll('.nav-tab, .bottom-nav-item').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      if (prefersReducedMotion()) return;
+      tab.classList.add('is-tapped');
+      window.setTimeout(() => tab.classList.remove('is-tapped'), 200);
+    });
   });
 }

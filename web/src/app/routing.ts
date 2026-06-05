@@ -4,9 +4,9 @@ import { performSearch } from './search_controller';
 export function setupRouting(): void {
   setupNavigation();
 
-  const input = document.getElementById('search-input') as HTMLInputElement;
-  const stateSelect = document.getElementById('search-state') as HTMLSelectElement;
-  const recommendationEl = document.getElementById('search-recommendations') as HTMLDivElement;
+  const input = document.getElementById('search-input') as HTMLInputElement | null;
+  const stateSelect = document.getElementById('search-state') as HTMLSelectElement | null;
+  const recommendationEl = document.getElementById('search-recommendations') as HTMLDivElement | null;
 
   const welcome = document.getElementById('search-welcome');
   const summary = document.getElementById('results-summary');
@@ -15,12 +15,14 @@ export function setupRouting(): void {
   }
   welcome?.classList.remove('hidden');
 
-  document.querySelectorAll('.search-tag').forEach((tag) => {
+  document.querySelectorAll('.shortcut-tag').forEach((tag) => {
     tag.addEventListener('click', () => {
-      const q = tag.textContent || '';
-      if (input) input.value = q;
+      const query = (tag as HTMLElement).dataset.query;
+      if (!query || !input) return;
+      input.value = query;
       recommendationEl?.classList.add('hidden');
-      void performSearch(q, stateSelect?.value ?? '');
+      void performSearch(query, stateSelect?.value ?? '');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
 }

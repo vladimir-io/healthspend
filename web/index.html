@@ -117,15 +117,28 @@
     <span id="db-status-label">Loading price database…</span>
   </div>
 
-  <div id="onboarding-root" class="onboarding hidden" aria-hidden="true">
-    <div class="onboarding-scrim"></div>
-    <div id="onboarding-bubble" class="onboarding-bubble" role="dialog" aria-labelledby="onboarding-title">
-      <p class="onboarding-step" id="onboarding-title"></p>
-      <p class="onboarding-body" id="onboarding-body"></p>
-      <div class="onboarding-actions">
-        <button type="button" id="onboarding-skip" class="btn-ghost">Skip</button>
-        <button type="button" id="onboarding-next" class="btn primary">Next</button>
-      </div>
+  <div id="help-root" class="help-root">
+    <button type="button" id="help-fab" class="help-fab" aria-label="Help and quick guide" aria-expanded="false"
+      aria-controls="help-panel">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+        stroke-linecap="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+      </svg>
+    </button>
+    <div id="help-panel" class="help-panel hidden" role="dialog" aria-labelledby="help-panel-title" aria-hidden="true">
+      <header class="help-panel__header">
+        <div>
+          <p class="help-panel__eyebrow">Quick guide</p>
+          <h2 id="help-panel-title" class="help-panel__title">How Healthspend works</h2>
+        </div>
+        <button type="button" id="help-panel-close" class="help-panel__close" aria-label="Close help">×</button>
+      </header>
+      <div id="help-panel-body" class="help-panel__body"></div>
+      <footer class="help-panel__footer">
+        <a href="#methodology" class="help-panel__link">Full methodology →</a>
+      </footer>
     </div>
   </div>
 
