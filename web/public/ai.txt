@@ -1,0 +1,25 @@
+# Healthspend AI access policy
+# https://healthspend.lol
+
+site: https://healthspend.lol
+llms-txt: https://healthspend.lol/llms.txt
+llms-full-txt: https://healthspend.lol/llms-full.txt
+manifest: https://healthspend.lol/api/v1/manifest.json
+sitemap: https://healthspend.lol/sitemap.xml
+
+# Retrieval (RAG, search grounding, citations) — encouraged on public pages
+ai-input: allow
+search-index: allow
+
+# Model training on our content — not permitted
+ai-train: disallow
+
+# Preferred machine-readable endpoints (no JavaScript)
+api-nodes: https://healthspend.lol/api/v1/nodes/{ccn}.json
+api-procedures: https://healthspend.lol/api/v1/procedures.json
+api-states: https://healthspend.lol/embed/data/{state}.json
+
+# Human search deep links
+search-url: https://healthspend.lol/?q={query}&state={state}#search
+
+contact: https://github.com/vladimir-io/healthspend

@@ -1,0 +1,190 @@
+{
+  "updated": "2026-06-05",
+  "count": 23,
+  "procedures": [
+    {
+      "cpt_code": "76700",
+      "name": "Abdominal Ultrasound",
+      "technical": "US abdomen, real time",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=76700#search",
+      "search_url_natural": "https://healthspend.lol/?q=Abdominal+Ultrasound#search"
+    },
+    {
+      "cpt_code": "70551",
+      "name": "Brain MRI",
+      "technical": "MRI brain without contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=70551#search",
+      "search_url_natural": "https://healthspend.lol/?q=Brain+MRI#search"
+    },
+    {
+      "cpt_code": "74177",
+      "name": "CT Scan",
+      "technical": "CT abdomen and pelvis w/ contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=74177#search",
+      "search_url_natural": "https://healthspend.lol/?q=CT+Scan#search"
+    },
+    {
+      "cpt_code": "71250",
+      "name": "Chest CT Scan",
+      "technical": "CT thorax without contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=71250#search",
+      "search_url_natural": "https://healthspend.lol/?q=Chest+CT+Scan#search"
+    },
+    {
+      "cpt_code": "71045",
+      "name": "Chest X-Ray",
+      "technical": "X-ray chest, 1 view",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=71045#search",
+      "search_url_natural": "https://healthspend.lol/?q=Chest+X-Ray#search"
+    },
+    {
+      "cpt_code": "80061",
+      "name": "Cholesterol / Lipid Panel",
+      "technical": "Lipid panel",
+      "category": "Lab Work",
+      "search_url": "https://healthspend.lol/?q=80061#search",
+      "search_url_natural": "https://healthspend.lol/?q=Cholesterol+%2F+Lipid+Panel#search"
+    },
+    {
+      "cpt_code": "45378",
+      "name": "Colonoscopy",
+      "technical": "Colonoscopy, diagnostic",
+      "category": "Surgery",
+      "search_url": "https://healthspend.lol/?q=45378#search",
+      "search_url_natural": "https://healthspend.lol/?q=Colonoscopy#search"
+    },
+    {
+      "cpt_code": "45380",
+      "name": "Colonoscopy (with biopsy)",
+      "technical": "Colonoscopy with biopsy",
+      "category": "Surgery",
+      "search_url": "https://healthspend.lol/?q=45380#search",
+      "search_url_natural": "https://healthspend.lol/?q=Colonoscopy+%28with+biopsy%29#search"
+    },
+    {
+      "cpt_code": "85025",
+      "name": "Complete Blood Count (CBC)",
+      "technical": "Blood count, complete (CBC) w/ auto diff",
+      "category": "Lab Work",
+      "search_url": "https://healthspend.lol/?q=85025#search",
+      "search_url_natural": "https://healthspend.lol/?q=Complete+Blood+Count+%28CBC%29#search"
+    },
+    {
+      "cpt_code": "83036",
+      "name": "Diabetes A1C Test",
+      "technical": "Hemoglobin A1c",
+      "category": "Lab Work",
+      "search_url": "https://healthspend.lol/?q=83036#search",
+      "search_url_natural": "https://healthspend.lol/?q=Diabetes+A1C+Test#search"
+    },
+    {
+      "cpt_code": "99213",
+      "name": "Doctor Office Visit (est)",
+      "technical": "Office visit, established patient, 20-29m",
+      "category": "Preventive",
+      "search_url": "https://healthspend.lol/?q=99213#search",
+      "search_url_natural": "https://healthspend.lol/?q=Doctor+Office+Visit+%28est%29#search"
+    },
+    {
+      "cpt_code": "99285",
+      "name": "ER Visit (life-threatening)",
+      "technical": "Emergency dept visit, highest complexity",
+      "category": "Emergency",
+      "search_url": "https://healthspend.lol/?q=99285#search",
+      "search_url_natural": "https://healthspend.lol/?q=ER+Visit+%28life-threatening%29#search"
+    },
+    {
+      "cpt_code": "99283",
+      "name": "Emergency Room",
+      "technical": "Emergency dept visit, moderate complexity",
+      "category": "Emergency",
+      "search_url": "https://healthspend.lol/?q=99283#search",
+      "search_url_natural": "https://healthspend.lol/?q=Emergency+Room#search"
+    },
+    {
+      "cpt_code": "90686",
+      "name": "Flu Shot (adult)",
+      "technical": "Influenza vaccine, 4-valent",
+      "category": "Preventive",
+      "search_url": "https://healthspend.lol/?q=90686#search",
+      "search_url_natural": "https://healthspend.lol/?q=Flu+Shot+%28adult%29#search"
+    },
+    {
+      "cpt_code": "70450",
+      "name": "Head CT Scan",
+      "technical": "CT head/brain without contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=70450#search",
+      "search_url_natural": "https://healthspend.lol/?q=Head+CT+Scan#search"
+    },
+    {
+      "cpt_code": "96372",
+      "name": "Injection / Shot",
+      "technical": "Therapeutic injection, subcutaneous/IM",
+      "category": "Preventive",
+      "search_url": "https://healthspend.lol/?q=96372#search",
+      "search_url_natural": "https://healthspend.lol/?q=Injection+%2F+Shot#search"
+    },
+    {
+      "cpt_code": "73721",
+      "name": "Knee MRI",
+      "technical": "MRI knee without contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=73721#search",
+      "search_url_natural": "https://healthspend.lol/?q=Knee+MRI#search"
+    },
+    {
+      "cpt_code": "27447",
+      "name": "Knee Replacement",
+      "technical": "Total knee arthroplasty",
+      "category": "Surgery",
+      "search_url": "https://healthspend.lol/?q=27447#search",
+      "search_url_natural": "https://healthspend.lol/?q=Knee+Replacement#search"
+    },
+    {
+      "cpt_code": "72148",
+      "name": "Lower Back MRI",
+      "technical": "MRI lumbar spine without contrast",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=72148#search",
+      "search_url_natural": "https://healthspend.lol/?q=Lower+Back+MRI#search"
+    },
+    {
+      "cpt_code": "77067",
+      "name": "Mammogram (screening)",
+      "technical": "Screening mammography, bilateral",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=77067#search",
+      "search_url_natural": "https://healthspend.lol/?q=Mammogram+%28screening%29#search"
+    },
+    {
+      "cpt_code": "80053",
+      "name": "Metabolic Panel",
+      "technical": "Comprehensive metabolic panel",
+      "category": "Lab Work",
+      "search_url": "https://healthspend.lol/?q=80053#search",
+      "search_url_natural": "https://healthspend.lol/?q=Metabolic+Panel#search"
+    },
+    {
+      "cpt_code": "76805",
+      "name": "Prenatal Ultrasound",
+      "technical": "OB ultrasound, after first trimester",
+      "category": "Imaging",
+      "search_url": "https://healthspend.lol/?q=76805#search",
+      "search_url_natural": "https://healthspend.lol/?q=Prenatal+Ultrasound#search"
+    },
+    {
+      "cpt_code": "84443",
+      "name": "Thyroid Test (TSH)",
+      "technical": "Thyroid stimulating hormone",
+      "category": "Lab Work",
+      "search_url": "https://healthspend.lol/?q=84443#search",
+      "search_url_natural": "https://healthspend.lol/?q=Thyroid+Test+%28TSH%29#search"
+    }
+  ]
+}

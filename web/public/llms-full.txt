@@ -1,0 +1,101 @@
+# Healthspend — Full agent & crawler guide
+
+> Compare published US hospital cash rates from CMS Price Transparency filings (45 CFR § 180.50).
+
+## What Healthspend is
+
+Healthspend is an open, patient-first hospital price transparency tool. It ingests CMS hospital registry data and machine-readable price files (MRFs) from 7,400+ US hospitals, scores transparency compliance, and lets users search published cash rates by procedure name or CPT code.
+
+**Not legal, medical, or billing advice.** Prices are from public filings and may not apply to every payer or visit.
+
+## Primary surfaces
+
+### Interactive web app (JavaScript + SQLite in browser)
+
+- Home / search: https://healthspend.lol/
+- Deep link search: `https://healthspend.lol/?q={query}&state={US_STATE}#search`
+- Hospitals directory: https://healthspend.lol/#hospitals
+- Methodology: https://healthspend.lol/#methodology
+
+The browser app loads `audit_hot.db` (~13 MB) from HuggingFace via sql.js-httpvfs. Search works on procedure names, CPT codes, and state filters.
+
+### Static JSON API (preferred for agents — no JS)
+
+#### Manifest
+`GET https://healthspend.lol/api/v1/manifest.json`
+Machine-readable index of endpoints, datasets, and guides.
+
+#### Procedures index
+`GET https://healthspend.lol/api/v1/procedures.json`
+Common CPT procedures with plain-language names and search deep links.
+
+#### Hospital node
+`GET https://healthspend.lol/api/v1/nodes/{ccn}.json`
+
+Response shape:
+```json
+{
+  "ccn": "010001",
+  "name": "HOSPITAL NAME",
+  "location": { "city": "DOTHAN", "state": "AL" },
+  "updated": "2026-04-07",
+  "prices": [
+    { "code": "80053", "desc": "Comprehensive Metabolic Panel", "price": 378.0 }
+  ]
+}
+```
+
+CCN = 6-digit CMS Certification Number (hospital ID).
+
+#### State embed samples
+`GET https://healthspend.lol/embed/data/{state}.json` — `{state}` is lowercase 2-letter code (e.g. `ca`, `ny`, `tx`).
+
+### Static HTML (SEO + structured data)
+
+- Per-hospital: `https://healthspend.lol/visibility/node-{ccn}.html` — includes schema.org MedicalWebPage + MedicalProcedure offers
+- Per-state: `https://healthspend.lol/visibility/state-{state}.html`
+- Reports: transparency-2026.html, state-of-non-compliance-2026.html, transparency-index.html
+
+## Bulk data downloads
+
+| Asset | URL | Notes |
+|-------|-----|-------|
+| Hot shard | https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_hot.db | 16 CPT codes, fast search |
+| Full ledger | https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db | All price rows |
+| Manifest | https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json | Row counts, schema |
+
+## Common procedures (CPT)
+
+| Code | Name | Search |
+|------|------|--------|
+| 70551 | Brain MRI | https://healthspend.lol/?q=70551#search |
+| 73721 | Knee MRI | https://healthspend.lol/?q=73721#search |
+| 80053 | Metabolic Panel | https://healthspend.lol/?q=80053#search |
+| 45378 | Colonoscopy | https://healthspend.lol/?q=45378#search |
+| 27447 | Knee Replacement | https://healthspend.lol/?q=27447#search |
+| 99283 | ER Visit Level 3 | https://healthspend.lol/?q=99283#search |
+| 71045 | Chest X-Ray | https://healthspend.lol/?q=71045#search |
+| 74177 | CT Scan | https://healthspend.lol/?q=74177#search |
+
+Full list: https://healthspend.lol/api/v1/procedures.json
+
+## Compliance & transparency scoring
+
+Hospitals receive transparency scores based on CMS signals: star ratings, patient experience measures, safety, mortality, readmission, and MRF file quality. Scores appear in the hospital directory and per-node JSON/HTML pages.
+
+## Regulatory context
+
+- CMS Hospital Price Transparency Rule: 45 CFR Part 180
+- Hospitals must publish machine-readable files (MRFs) with cash and negotiated rates
+- Healthspend audits filing quality and surfaces published cash rates
+
+## Source code
+
+https://github.com/vladimir-io/healthspend — ingestion pipeline, SQLite schema, web UI, open source.
+
+## Contact & updates
+
+- Site: https://healthspend.lol
+- Developers: https://healthspend.lol/developers.html
+- API docs: https://healthspend.lol/api/v1/documentation.html
+- Sitemap: https://healthspend.lol/sitemap.xml

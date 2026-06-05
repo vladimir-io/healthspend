@@ -1,0 +1,74 @@
+{
+  "name": "Healthspend",
+  "description": "US hospital price transparency \u2014 published cash rates from CMS filings for 7,400+ hospitals.",
+  "version": "1.0",
+  "updated": "2026-06-05",
+  "site": "https://healthspend.lol",
+  "guides": {
+    "llms_txt": "https://healthspend.lol/llms.txt",
+    "llms_full_txt": "https://healthspend.lol/llms-full.txt",
+    "ai_txt": "https://healthspend.lol/ai.txt",
+    "robots_txt": "https://healthspend.lol/robots.txt",
+    "developers": "https://healthspend.lol/developers.html",
+    "documentation": "https://healthspend.lol/api/v1/documentation.html",
+    "sitemap": "https://healthspend.lol/sitemap.xml"
+  },
+  "search": {
+    "web_app": "https://healthspend.lol/#search",
+    "deep_link_template": "https://healthspend.lol/?q={query}&state={state}#search",
+    "examples": [
+      "https://healthspend.lol/?q=MRI#search",
+      "https://healthspend.lol/?q=80053&state=CA#search",
+      "https://healthspend.lol/?q=Knee+Replacement#search"
+    ]
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/api/v1/manifest.json",
+      "description": "This file \u2014 machine-readable site index"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/procedures.json",
+      "description": "Common CPT procedures with search deep links"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/nodes/{ccn}.json",
+      "description": "Per-hospital published cash rates (CCN = 6-digit CMS ID)",
+      "count": 5426,
+      "example": "https://healthspend.lol/api/v1/nodes/010001.json"
+    },
+    {
+      "method": "GET",
+      "path": "/embed/data/{state}.json",
+      "description": "State-level price samples (lowercase 2-letter state code)",
+      "count": 50,
+      "example": "https://healthspend.lol/embed/data/ca.json"
+    }
+  ],
+  "static_html": {
+    "hospital_pages": "https://healthspend.lol/visibility/node-{ccn}.html",
+    "state_pages": "https://healthspend.lol/visibility/state-{state}.html"
+  },
+  "datasets": [
+    {
+      "name": "audit_hot.db",
+      "url": "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_hot.db",
+      "description": "Hot search shard \u2014 16 high-traffic CPT codes"
+    },
+    {
+      "name": "audit_data.db",
+      "url": "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db",
+      "description": "Full price ledger \u2014 all ingested rows"
+    },
+    {
+      "name": "dataset_manifest.json",
+      "url": "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json",
+      "description": "Schema and row counts"
+    }
+  ],
+  "source": "https://github.com/vladimir-io/healthspend",
+  "license": "Open source \u2014 see GitHub repository"
+}

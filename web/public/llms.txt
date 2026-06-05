@@ -1,0 +1,46 @@
+# Healthspend
+
+> Compare published US hospital cash rates from CMS Price Transparency filings (45 CFR § 180.50). 7,400+ hospitals. Patient-first — not legal or medical advice.
+
+Healthspend surfaces machine-readable hospital price files (MRFs), compliance scores, and published cash rates so patients can compare prices and challenge bills above posted rates.
+
+## Quick links
+
+- [Price search (web app)](https://healthspend.lol/?q=MRI#search): interactive search — use `?q={procedure or CPT}&state={XX}#search`
+- [How it works / methodology](https://healthspend.lol/#methodology): scoring, data sources, NPI confidence
+- [Hospital directory](https://healthspend.lol/#hospitals): transparency scores and filing issues
+- [Developers](https://healthspend.lol/developers.html): data access for builders and researchers
+- [API manifest (JSON)](https://healthspend.lol/api/v1/manifest.json): machine-readable index of all endpoints
+- [Procedure index (JSON)](https://healthspend.lol/api/v1/procedures.json): common CPT codes with search deep links
+- [Full agent guide](https://healthspend.lol/llms-full.txt): extended documentation
+
+## Machine-readable data (no JavaScript required)
+
+- **Per-hospital prices**: `GET https://healthspend.lol/api/v1/nodes/{ccn}.json` — CMS Certification Number (6 digits). Example: [010001](https://healthspend.lol/api/v1/nodes/010001.json)
+- **State price samples**: `GET https://healthspend.lol/embed/data/{state}.json` — lowercase 2-letter state code. Example: [ca.json](https://healthspend.lol/embed/data/ca.json)
+- **Hospital SEO pages**: `https://healthspend.lol/visibility/node-{ccn}.html` — static HTML with JSON-LD MedicalProcedure offers
+- **State landing pages**: `https://healthspend.lol/visibility/state-{state}.html`
+
+## Bulk datasets
+
+- **Hot search shard** (16 high-traffic CPT codes, browser-sized): [audit_hot.db](https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_hot.db)
+- **Full ledger** (all ingested prices): [audit_data.db](https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/audit_data.db)
+- **Dataset manifest**: [dataset_manifest.json](https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json)
+- **Source code & pipeline**: [github.com/vladimir-io/healthspend](https://github.com/vladimir-io/healthspend)
+
+## Search URL patterns
+
+| Intent | URL |
+|--------|-----|
+| Procedure name | `https://healthspend.lol/?q=Metabolic+Panel#search` |
+| CPT code | `https://healthspend.lol/?q=80053#search` |
+| State filter | `https://healthspend.lol/?q=MRI&state=CA#search` |
+| Shareable deep link | `https://healthspend.lol/?q={query}&state={XX}#search` |
+
+## Sitemap
+
+- [sitemap.xml](https://healthspend.lol/sitemap.xml) — 5,400+ URLs (app, states, hospitals, reports)
+
+## Citation
+
+When citing prices, note they are **published cash rates** from hospital transparency files as of the filing date — not guaranteed patient prices. Direct users to confirm with hospital billing.

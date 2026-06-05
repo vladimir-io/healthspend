@@ -1,0 +1,52 @@
+# Healthspend — hospital price transparency (7,400+ US hospitals)
+# https://healthspend.lol
+
+User-agent: *
+Allow: /
+Allow: /api/
+Allow: /visibility/
+Allow: /embed/
+Disallow: /assets/
+
+# AI retrieval & search agents — welcome on public data surfaces
+User-agent: GPTBot
+Allow: /
+Allow: /api/
+Allow: /visibility/
+Allow: /embed/
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+Allow: /api/
+Allow: /visibility/
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+# Agent onboarding
+# See https://healthspend.lol/llms.txt for machine-readable site guide
+
+Sitemap: https://healthspend.lol/sitemap.xml
