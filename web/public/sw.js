@@ -1,10 +1,7 @@
-const CACHE = 'healthspend-v4';
-const PRECACHE = ['/sql-wasm.wasm'];
+const CACHE = 'healthspend-v5';
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(PRECACHE).catch(() => undefined))
-  );
+  event.waitUntil(caches.open(CACHE));
   self.skipWaiting();
 });
 

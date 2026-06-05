@@ -25,7 +25,10 @@ export function setupCanvasSearch(): void {
 
   const isDark = () => document.documentElement.getAttribute('data-theme') !== 'light';
 
+  let animating = false;
+
   function draw() {
+    if (!animating) return;
     requestAnimationFrame(draw);
     if (!canvas) return;
     t += 0.016;
@@ -70,5 +73,29 @@ export function setupCanvasSearch(): void {
   input.addEventListener('input', () => {
     hasQuery = input.value.length > 0;
   });
-  draw();
+
+  const startAnimation = () => {
+    if (animating) return;
+    animating = true;
+    draw();
+  };
+
+  const scheduleAnimation = () => {
+    if (typeof requestIdleCallback === 'function') {
+      requestIdleCallback(startAnimation, { timeout: 3000 });
+    } else {
+      setTimeout(startAnimation, 1500);
+    }
+  };
+
+  const searchView = document.getElementById('view-search');
+  if (searchView && !searchView.classList.contains('hidden')) {
+    scheduleAnimation();
+  }
+
+  window.addEventListener('hashchange', () => {
+    const visible = !searchView?.classList.contains('hidden');
+    if (visible) scheduleAnimation();
+    else animating = false;
+  });
 }
