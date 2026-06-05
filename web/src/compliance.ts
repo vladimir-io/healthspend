@@ -1,10 +1,7 @@
 import { getSharedWorker } from './worker.js';
-
 import { DB_URL } from './config';
-let metricsCache: { totalAudited: number, totalHiding: number } | null = null;
 
-// Pre-connect on module load
-setTimeout(() => getSharedWorker(DB_URL), 0);
+let metricsCache: { totalAudited: number, totalHiding: number } | null = null;
 
 export interface ComplianceRecord {
   ccn: string;

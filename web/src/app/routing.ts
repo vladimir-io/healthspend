@@ -1,8 +1,11 @@
+import { ensureDeferredView } from './deferred_views';
 import { setupNavigation } from './nav';
 import { performSearch } from './search_controller';
 
 export function setupRouting(): void {
-  setupNavigation();
+  setupNavigation((route) => {
+    void ensureDeferredView(route);
+  });
 
   const input = document.getElementById('search-input') as HTMLInputElement | null;
   const stateSelect = document.getElementById('search-state') as HTMLSelectElement | null;

@@ -1,6 +1,4 @@
-import { prefetchDatabase } from '../worker';
 import { markColdStart } from '../rum';
-import { renderMethodology } from '../views/methodology';
 import { setupCanvasSearch } from './canvas';
 import { setupCptPanel } from './cpt_panel';
 import { setupOverlays } from './overlays';
@@ -8,11 +6,12 @@ import { setupMicroInteractions } from './micro';
 import { setupHelp } from './help';
 import { setupHeroIntents } from './hero_intents';
 import { setupDatabaseStatusBanner } from './db_status';
+import { warmDatabaseNow, scheduleIdleDatabaseWarm } from './db_warm';
 import { setupRouting } from './routing';
 import { applyUrlParamsOnLoad } from './url_params';
 import { setupDynamicYear, setupThemeToggle } from './theme';
 
-export async function bootstrap(): Promise<void> {
+export function bootstrap(): void {
   markColdStart();
 
   if ('serviceWorker' in navigator) {
@@ -29,14 +28,16 @@ export async function bootstrap(): Promise<void> {
   setupHelp();
   setupHeroIntents();
   setupDatabaseStatusBanner();
-  prefetchDatabase();
+
+  const hasSearchDeepLink = Boolean(new URLSearchParams(window.location.search).get('q')?.trim());
+  if (hasSearchDeepLink) {
+    warmDatabaseNow();
+  } else {
+    scheduleIdleDatabaseWarm();
+  }
+
   applyUrlParamsOnLoad();
 
   const input = document.getElementById('search-input');
-  input?.addEventListener('focus', () => prefetchDatabase(), { once: false });
-
-  const { renderHospitals } = await import('../views/hospitals');
-  await renderHospitals('view-hospitals');
-
-  await renderMethodology('view-methodology');
+  input?.addEventListener('focus', () => warmDatabaseNow(), { once: false });
 }
