@@ -2,7 +2,7 @@ import { enrichSearchStats, getRecommendations, searchPricesWithMeta } from '../
 import { NPI_CONFIDENCE_THRESHOLD } from '../config';
 import { recordRum } from '../rum';
 import { FALLBACK_LABELS, formatResultsSummary } from './copy';
-import { buildSearchShareUrl } from './url_params';
+import { buildSearchShareUrl } from './share_url';
 import { handleDispute, handleDraft } from './overlays';
 
 export const SEARCH_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
@@ -10,14 +10,14 @@ const SEARCH_PAGE_SIZE = 100;
 
 let searchCounter = 0;
 
-const input = document.getElementById('search-input') as HTMLInputElement;
-const stateSelect = document.getElementById('search-state') as HTMLSelectElement;
-const resultsContainer = document.getElementById('results-container') as HTMLDivElement;
-const contextBanner = document.getElementById('results-context-banner') as HTMLDivElement;
-const sortSelect = document.getElementById('sort-select') as HTMLSelectElement;
-const recommendationEl = document.getElementById('search-recommendations') as HTMLDivElement;
-const resultsSummaryEl = document.getElementById('results-summary') as HTMLParagraphElement;
-const searchLoadingIndicator = document.getElementById('search-loading-indicator') as HTMLDivElement;
+const input = document.getElementById('search-input') as HTMLInputElement | null;
+const stateSelect = document.getElementById('search-state') as HTMLSelectElement | null;
+const resultsContainer = document.getElementById('results-container') as HTMLDivElement | null;
+const contextBanner = document.getElementById('results-context-banner') as HTMLDivElement | null;
+const sortSelect = document.getElementById('sort-select') as HTMLSelectElement | null;
+const recommendationEl = document.getElementById('search-recommendations') as HTMLDivElement | null;
+const resultsSummaryEl = document.getElementById('results-summary') as HTMLParagraphElement | null;
+const searchLoadingIndicator = document.getElementById('search-loading-indicator') as HTMLDivElement | null;
 const CONFIDENCE_FLOOR_LABEL = `${Math.round(SEARCH_CONFIDENCE_THRESHOLD * 100)}%`;
 const NPI_CONFIDENCE_TOOLTIP = `Strict mode: only rows with NPI confidence >= ${CONFIDENCE_FLOOR_LABEL} are shown by default.`;
 
@@ -35,6 +35,7 @@ let currentSearchState = {
 };
 
 function showSearchMessage(message: string, tone: 'neutral' | 'error' = 'neutral') {
+  if (!resultsContainer) return;
   resultsContainer.innerHTML = `
     <div class="empty-state empty-state--${tone}">
       <p>${message}</p>
@@ -57,50 +58,57 @@ function getSearchDisplayRange() {
 }
 
 let debounceTimer: ReturnType<typeof setTimeout> | undefined;
-let recsDebounceTimer: any;
+let recsDebounceTimer: ReturnType<typeof setTimeout> | undefined;
 
-input.addEventListener('input', () => {
+function bindSearchInputHandlers(): void {
+  if (!input || !stateSelect || !resultsContainer) return;
+
+  input.addEventListener('input', () => {
     clearTimeout(debounceTimer);
-    const query = input.value;
-    const state = stateSelect.value;
+    const query = input!.value;
+    const state = stateSelect!.value;
 
     clearTimeout(recsDebounceTimer);
     recsDebounceTimer = setTimeout(() => {
-      const recs = getRecommendations(input.value);
+      const recs = getRecommendations(input!.value);
       if (recs.length > 0) {
         renderRecommendations(recs);
-        recommendationEl.classList.remove('hidden');
+        recommendationEl?.classList.remove('hidden');
       } else {
-        recommendationEl.classList.add('hidden');
+        recommendationEl?.classList.add('hidden');
       }
     }, 100);
 
     if (query.length > 2) {
-        debounceTimer = setTimeout(() => performSearch(query, state), 280);
+      debounceTimer = setTimeout(() => performSearch(query, state), 280);
     } else {
       setSearchLoading(false);
-      contextBanner.classList.add('hidden');
+      contextBanner?.classList.add('hidden');
       if (query.trim().length > 0) {
         showSearchMessage('Keep typing: search runs at 3+ characters.');
       } else {
-        resultsContainer.classList.add('hidden');
+        resultsContainer!.classList.add('hidden');
       }
     }
-});
+  });
 
   input.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    const query = input.value.trim();
-    const state = stateSelect.value;
+    const query = input!.value.trim();
+    const state = stateSelect!.value;
     if (query.length < 3) {
       showSearchMessage('Enter at least 3 characters to run search.');
       return;
     }
     performSearch(query, state);
   });
+}
+
+bindSearchInputHandlers();
 
 function renderRecommendations(recs: {query: string, code: string}[]) {
+    if (!recommendationEl || !input || !stateSelect) return;
     recommendationEl.innerHTML = recs.map(r => `
         <div class="recommendation-item" data-query="${r.query}">
             <span class="rec-query">${r.query}</span>
@@ -119,12 +127,14 @@ function renderRecommendations(recs: {query: string, code: string}[]) {
 }
 
 document.addEventListener('click', (e) => {
+    if (!recommendationEl || !input) return;
     if (!recommendationEl.contains(e.target as Node) && e.target !== input) {
         recommendationEl.classList.add('hidden');
     }
 });
 
-sortSelect.addEventListener('change', () => {
+sortSelect?.addEventListener('change', () => {
+  if (!input || !stateSelect) return;
   const query = input.value.trim();
   const state = stateSelect.value;
   if (query.length > 2) {
@@ -139,13 +149,15 @@ function applySortAndRender() {
   renderResults(currentResults);
 }
 
-stateSelect.addEventListener('change', () => {
+stateSelect?.addEventListener('change', () => {
+    if (!input || !stateSelect) return;
     const query = input.value;
     const state = stateSelect.value;
     if (query.length > 2) performSearch(query, state);
 });
 
 export async function performSearch(query: string, state: string = '') {
+    if (!resultsContainer) return;
     const activeSort = (sortSelect?.value || 'price-asc') as 'price-asc' | 'price-desc' | 'score-desc';
     const searchQuery = (query || '').trim();
     const isSameSearch = searchQuery === currentSearchState.query && state === currentSearchState.state && activeSort === currentSearchState.sort;
@@ -157,7 +169,7 @@ export async function performSearch(query: string, state: string = '') {
     const searchId = ++searchCounter;
     const marketPanel = document.getElementById('market-rates-panel');
     
-    contextBanner.classList.add('hidden');
+    contextBanner?.classList.add('hidden');
     marketPanel?.classList.add('hidden');
   resultsContainer.classList.add('hidden');
     setSearchLoading(true);
@@ -255,7 +267,7 @@ export async function performSearch(query: string, state: string = '') {
               marketPanel.classList.remove('hidden');
             }
 
-            contextBanner.classList.remove('hidden');
+            contextBanner?.classList.remove('hidden');
             document.getElementById('search-welcome')?.classList.add('hidden');
             const shareBtn = document.getElementById('btn-share-search');
             if (shareBtn && currentSearchState.query.length >= 3) {
@@ -317,7 +329,7 @@ export async function performSearch(query: string, state: string = '') {
         }
     } catch (e) {
       setSearchLoading(false);
-      contextBanner.classList.remove('hidden');
+      contextBanner?.classList.remove('hidden');
       currentResults = [];
       if (resultsSummaryEl) {
         resultsSummaryEl.innerText = 'Search temporarily unavailable';
@@ -328,6 +340,7 @@ export async function performSearch(query: string, state: string = '') {
 }
 
 function renderLoadMoreControl() {
+    if (!resultsContainer) return;
     const existing = resultsContainer.querySelector('.load-more-hub');
     existing?.remove();
 
@@ -350,6 +363,7 @@ function renderLoadMoreControl() {
 }
 
 function renderResults(results: any[]) {
+    if (!resultsContainer) return;
     const validResults = results; 
 
     resultsContainer.innerHTML = '';

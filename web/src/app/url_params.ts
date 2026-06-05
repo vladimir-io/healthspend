@@ -1,6 +1,8 @@
 import { performSearch } from './search_controller';
 import { navigateTo, setHospitalsTab } from './nav';
 
+export { buildSearchShareUrl } from './share_url';
+
 /** Apply ?q= &state= &tab= from the URL on first load. */
 export function applyUrlParamsOnLoad(): void {
   const params = new URLSearchParams(window.location.search);
@@ -29,15 +31,7 @@ export function applyUrlParamsOnLoad(): void {
 
   document.getElementById('search-welcome')?.classList.add('hidden');
   window.location.hash = '#search';
-  void performSearch(q, stateSelect?.value ?? '');
-}
-
-export function buildSearchShareUrl(query: string, state: string): string {
-  const url = new URL(window.location.origin + window.location.pathname);
-  url.searchParams.set('q', query);
-  if (state) url.searchParams.set('state', state);
-  url.hash = '#search';
-  return url.toString();
+  void performSearch(q, stateSelect?.value ?? state);
 }
 
 export function navigateToHospitalIssues(): void {

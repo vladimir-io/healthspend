@@ -29,6 +29,7 @@ export async function bootstrap(): Promise<void> {
   setupRouting();
   setupOnboarding();
   setupDatabaseStatusBanner();
+  prefetchDatabase();
   applyUrlParamsOnLoad();
 
   const input = document.getElementById('search-input');

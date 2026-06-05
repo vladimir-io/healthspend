@@ -50,6 +50,19 @@ export type SearchOptions = {
 
 const DEFAULT_SEARCH_PAGE_SIZE = 100;
 
+function sqlUsesFtsMatch(sql: string): boolean {
+  return /\bMATCH\b/i.test(sql);
+}
+
+async function dbQuery(w: any, sql: string, params?: any[]): Promise<any[]> {
+  try {
+    const rows = await w.db.query(sql, params);
+    return Array.isArray(rows) ? rows : [];
+  } catch {
+    return [];
+  }
+}
+
 type FallbackReason =
   | 'state_fuzzy'
   | 'national_scope'
@@ -312,7 +325,7 @@ function buildQuery(
       sql += ` AND (p.cpt_code = ? OR p.cpt_code LIKE ? OR p.cpt_code LIKE ?)`;
       params.push(mappedCpt, `${mappedCpt}-%`, `${mappedCpt} %`);
     } else if (usedFts && ftsQ) {
-      sql += ` AND (fts MATCH ? OR p.cpt_code LIKE ?)`;
+      sql += ` AND (prices_fts MATCH ? OR p.cpt_code LIKE ?)`;
       params.push(ftsQ, `%${mappedCpt}%`);
     } else {
       sql += ` AND (p.description LIKE ? OR p.cpt_code LIKE ?)`;
@@ -338,12 +351,14 @@ function buildQuery(
 }
 
 async function countForQuery(w: any, sql: string, params: any[]): Promise<number> {
+  if (sqlUsesFtsMatch(sql)) return 0;
   const countSql = `SELECT COUNT(1) as total FROM (${sql.replace(/ORDER BY[\s\S]*$/, '')}) q`;
-  const rows = await w.db.query(countSql, params) as any[];
+  const rows = await dbQuery(w, countSql, params);
   return Number(rows?.[0]?.total || 0);
 }
 
 async function marketForQuery(w: any, sql: string, params: any[]) {
+  if (sqlUsesFtsMatch(sql)) return null;
   const baseSql = sql.replace(/ORDER BY[\s\S]*$/, '');
   const marketSql = `
     WITH filtered AS (
@@ -364,7 +379,7 @@ async function marketForQuery(w: any, sql: string, params: any[]) {
       MIN(CASE WHEN rn >= CAST(CEIL(cnt * 0.90) AS INT) THEN cash_price END) as p90
     FROM ranked
   `;
-  const rows = await w.db.query(marketSql, params) as any[];
+  const rows = await dbQuery(w, marketSql, params);
   const first = rows?.[0];
   if (!first || first.min == null || first.max == null || first.median == null || first.p10 == null || first.p90 == null) {
     return null;
@@ -385,20 +400,25 @@ export async function enrichSearchStats(
   rowCount: number
 ): Promise<Pick<SearchResponse, 'total' | 'market'>> {
   const t0 = performance.now();
-  const w = await getSharedWorker(DB_URL);
-  const { sql, params } = statsQuery;
-  const fullPage = rowCount === limit;
-  if (fullPage) {
-    const [total, market] = await Promise.all([
-      countForQuery(w, sql, params),
-      marketForQuery(w, sql, params),
-    ]);
+  try {
+    const w = await getSharedWorker(DB_URL);
+    const { sql, params } = statsQuery;
+    const fullPage = rowCount === limit;
+    if (fullPage) {
+      const [total, market] = await Promise.all([
+        countForQuery(w, sql, params),
+        marketForQuery(w, sql, params),
+      ]);
+      recordRum({ name: 'search_stats', ms: performance.now() - t0 });
+      return { total: total || offset + rowCount, market };
+    }
+    const market = await marketForQuery(w, sql, params);
     recordRum({ name: 'search_stats', ms: performance.now() - t0 });
-    return { total, market };
+    return { total: offset + rowCount, market };
+  } catch {
+    recordRum({ name: 'search_stats', ms: performance.now() - t0 });
+    return { total: offset + rowCount, market: null };
   }
-  const market = await marketForQuery(w, sql, params);
-  recordRum({ name: 'search_stats', ms: performance.now() - t0 });
-  return { total: offset + rowCount, market };
 }
 
 export async function searchPricesWithMeta(
@@ -440,10 +460,10 @@ export async function searchPricesWithMeta(
 
   const runTextSearch2 = async (b: (useFts: boolean) => ReturnType<typeof buildQuery>) => {
     let qo = b(ftsAvailable);
-    let rows = (await w.db.query(qo.sql, qo.params)) as any[];
+    let rows = await dbQuery(w, qo.sql, qo.params);
     if (rows.length === 0 && qo.usedFts) {
       qo = b(false);
-      rows = (await w.db.query(qo.sql, qo.params)) as any[];
+      rows = await dbQuery(w, qo.sql, qo.params);
     }
     return { rows, qo };
   };
@@ -473,7 +493,8 @@ export async function searchPricesWithMeta(
     let localFuzzy: any[] = [];
     let localFtsPath = false;
     if (ftsAvailable && ftsNorm) {
-      localFuzzy = (await w.db.query(
+      localFuzzy = await dbQuery(
+        w,
         `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
@@ -487,17 +508,18 @@ export async function searchPricesWithMeta(
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
          AND h.state = ?
-         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
+         AND (prices_fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
        ORDER BY ${resolveOrderBy(sort)}
        LIMIT ${limit} OFFSET ${offset}`,
         withAttributionConfidence
           ? [minConfidence, state.toUpperCase(), ftsNorm, `%${normQuery}%`, `%${normQuery}%`]
           : [state.toUpperCase(), ftsNorm, `%${normQuery}%`, `%${normQuery}%`]
-      )) as any[];
+      );
       localFtsPath = localFuzzy.length > 0;
     }
     if (localFuzzy.length === 0) {
-      localFuzzy = (await w.db.query(
+      localFuzzy = await dbQuery(
+        w,
         `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
@@ -516,7 +538,7 @@ export async function searchPricesWithMeta(
         withAttributionConfidence
           ? [minConfidence, state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`]
           : [state.toUpperCase(), `%${normQuery}%`, `%${normQuery}%`]
-      )) as any[];
+      );
     }
 
     if (localFuzzy.length > 0) {
@@ -534,7 +556,7 @@ export async function searchPricesWithMeta(
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
          AND h.state = ?
-         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
+         AND (prices_fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
       ORDER BY ${resolveOrderBy(sort)}
       LIMIT ${limit} OFFSET ${offset}`;
         finalParams = withAttributionConfidence
@@ -614,7 +636,8 @@ export async function searchPricesWithMeta(
     let nationalText: any[] = [];
     let nationalTextFts = false;
     if (ftsAvailable && ftsN) {
-      nationalText = (await w.db.query(
+      nationalText = await dbQuery(
+        w,
         `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
@@ -627,17 +650,18 @@ export async function searchPricesWithMeta(
        WHERE p.cash_price IS NOT NULL
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
-         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
+         AND (prices_fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
        ORDER BY ${resolveOrderBy(sort)}
        LIMIT 100`,
         withAttributionConfidence
           ? [minConfidence, ftsN, `%${normQuery}%`, `%${normQuery}%`]
           : [ftsN, `%${normQuery}%`, `%${normQuery}%`]
-      )) as any[];
+      );
       nationalTextFts = nationalText.length > 0;
     }
     if (nationalText.length === 0) {
-      nationalText = (await w.db.query(
+      nationalText = await dbQuery(
+        w,
         `SELECT
          p.*, h.ccn, h.website, h.zip_code,
          COALESCE(h.city, p.hospital_name) as city,
@@ -655,7 +679,7 @@ export async function searchPricesWithMeta(
         withAttributionConfidence
           ? [minConfidence, `%${normQuery}%`, `%${normQuery}%`]
           : [`%${normQuery}%`, `%${normQuery}%`]
-      )) as any[];
+      );
     }
     if (nationalText.length > 0) {
       if (nationalTextFts) {
@@ -671,7 +695,7 @@ export async function searchPricesWithMeta(
        WHERE p.cash_price IS NOT NULL
          AND p.cash_price > 0
          ${withAttributionConfidence ? 'AND COALESCE(p.attribution_confidence, 1.0) >= ?' : ''}
-         AND (fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
+         AND (prices_fts MATCH ? OR p.cpt_code LIKE ? OR p.description LIKE ?)
       ORDER BY ${resolveOrderBy(sort)}
       LIMIT ${limit} OFFSET ${offset}`;
         finalParams = withAttributionConfidence
@@ -725,7 +749,7 @@ export async function searchPricesWithMeta(
         offset,
         false
       );
-      const catRows = (await w.db.query(catQuery.sql, catQuery.params)) as any[];
+      const catRows = await dbQuery(w, catQuery.sql, catQuery.params);
       if (catRows.length > 0) {
         finalSql = catQuery.sql;
         finalParams = catQuery.params;
