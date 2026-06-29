@@ -1,6 +1,0 @@
-{
-  "zone_name": "healthspend.lol",
-  "description": "Block automated probes targeting common exploit paths",
-  "action": "block",
-  "expression": "(http.request.uri.path contains \"/wp-admin\") or (http.request.uri.path contains \"/wp-includes\") or (http.request.uri.path contains \"/wp-content\") or (http.request.uri.path contains \".env\") or (http.request.uri.path contains \".git\") or (http.request.uri.path contains \"/.git\") or (http.request.uri.path contains \"wp-login.php\") or (http.request.uri.path contains \"xmlrpc.php\")"
-}

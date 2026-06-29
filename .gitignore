@@ -83,6 +83,15 @@ web/.env
 web/.env.local
 web/.env.*.local
 
+# Private operations (local only — not published)
+infra/
+docs/OPERATIONS.md
+scripts/deploy_cloudflare.sh
+scripts/verify_cloudflare_token.sh
+scripts/apply_cloudflare_waf.py
+scripts/rum_analytics_report.py
+wrangler.toml
+
 # Playwright
 web/test-results/
 playwright-report/
@@ -91,7 +100,6 @@ playwright-report/
 web/public/audit_data.db
 web/public/audit_hot.db
 .venv-hf/
-wrangler.toml
 
 # ── Tracked exceptions ───────────────────────────────────────────────────────
 !web/public/favicon.ico

@@ -32,7 +32,7 @@ The app runs entirely in your browser against SQLite snapshots — no account, n
 ```text
 healthspend/
 ├── scraper/                  # Rust pipeline: MRF discovery, audit, parsing
-├── scripts/                  # Validation, hot-shard build, deploy helpers
+├── scripts/                  # Validation, hot-shard build, data tooling
 ├── web/                      # Vite + TypeScript SPA
 │   ├── public/               # Static assets, SQLite DBs (fetched separately)
 │   └── src/                  # Search, views, client-side SQL
@@ -43,7 +43,6 @@ healthspend/
 ## Documentation
 
 - [Methodology](docs/METHODOLOGY.md) — data sources and scoring
-- [Operations](docs/OPERATIONS.md) — deploy, RUM analytics, WAF, pipelines
 - [Legal](docs/LEGAL.md) — disclaimers
 
 ## Tech stack

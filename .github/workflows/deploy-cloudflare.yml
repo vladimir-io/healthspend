@@ -8,7 +8,6 @@ on:
       - 'web/**'
       - 'scripts/patch_visibility_seo.py'
       - 'scripts/generate_compare_pages.py'
-      - 'scripts/rum_analytics_report.py'
       - '.github/workflows/deploy-cloudflare.yml'
 
 jobs:
@@ -30,7 +29,14 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-        run: bash scripts/verify_cloudflare_token.sh
+        run: |
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects/healthspend")
+          if [ "$CODE" != "200" ]; then
+            echo "Cloudflare token cannot access Pages project (HTTP $CODE)" >&2
+            exit 1
+          fi
 
       - name: Sync dataset manifest
         run: |
