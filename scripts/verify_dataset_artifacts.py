@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import sqlite3
 import sys
@@ -12,13 +13,14 @@ from pathlib import Path
 MIN_HOSPITALS = int(os.environ.get("HS_VERIFY_MIN_HOSPITALS", "5000"))
 MIN_PRICES = int(os.environ.get("HS_VERIFY_MIN_PRICES", "10000"))
 MIN_CPTS = int(os.environ.get("HS_VERIFY_MIN_CPTS", "20"))
+MIN_HOT_HOSPITALS = int(os.environ.get("HS_VERIFY_MIN_HOT_HOSPITALS", "1000"))
 
-# Must stay in sync with scripts/build_hot_db.py
-HOT_CPTS = (
-    "27447", "27130", "70551", "74177", "71045", "80053", "45378",
-    "99283", "99285", "59400", "12001", "90686", "96372", "99213",
-    "90791", "95810",
-)
+_SCRIPTS = Path(__file__).resolve().parent
+_spec = importlib.util.spec_from_file_location("build_hot_db", _SCRIPTS / "build_hot_db.py")
+_mod = importlib.util.module_from_spec(_spec)
+assert _spec.loader is not None
+_spec.loader.exec_module(_mod)
+HOT_CPTS: tuple[str, ...] = _mod.HOT_CPTS
 
 
 def _cpt_set(conn: sqlite3.Connection) -> set[str]:
@@ -104,9 +106,18 @@ def verify_hot_db(path: Path, full_path: Path | None) -> list[str]:
                 f"  note: {path.name} has same price row count as full — "
                 "full build may only contain hot-path CPTs until MRF ingestion widens"
             )
-        if hot_hospitals != full_hospitals:
+        if hot_hospitals > full_hospitals:
             errors.append(
-                f"{path.name}: hospitals table should match full copy ({hot_hospitals} vs {full_hospitals})"
+                f"{path.name}: hot hospitals cannot exceed full ({hot_hospitals:,} > {full_hospitals:,})"
+            )
+        elif hot_hospitals < MIN_HOT_HOSPITALS:
+            errors.append(
+                f"{path.name}: expected ≥{MIN_HOT_HOSPITALS:,} hot hospitals, got {hot_hospitals:,}"
+            )
+        elif hot_hospitals < full_hospitals:
+            print(
+                f"  note: {path.name} slim hospital set — {hot_hospitals:,} of {full_hospitals:,} "
+                "(hospitals with hot CPT prices only)"
             )
 
     conn.close()
