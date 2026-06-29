@@ -48,3 +48,12 @@ cd web && npm install && npm run dev
 ```
 
 Uses `audit_hot.db` by default. Set `VITE_USE_FULL_DB=true` for the full ledger.
+
+## Search quality
+
+```bash
+cd web && npm run search:check    # regression invariants + 16-case quality suite
+cd web && npm run search:quality  # mapping + row-count tests only
+```
+
+Requires `web/public/audit_data.db`. CI runs this on every `web/**` push. Add cases in `web/src/search_quality_cases.ts`.

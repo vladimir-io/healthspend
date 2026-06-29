@@ -1,5 +1,5 @@
 import { getSharedWorker } from './worker.js';
-import { CPT_CATALOG, PLAIN_TO_CODE } from './cpt_catalog.js';
+import { CPT_CATALOG } from './cpt_catalog.js';
 export { CPT_CATALOG, CPT_CATEGORIES, CODE_TO_PLAIN } from './cpt_catalog.js';
 import {
   DB_URL,
@@ -8,6 +8,16 @@ import {
   NPI_CONFIDENCE_THRESHOLD,
 } from './config';
 import { markSearchSession, recordRum } from './rum';
+import {
+  AUDIT_NODES,
+  CATEGORY_FALLBACK,
+  normalizeQuery,
+  resolveMappedCode,
+} from './search_resolve.js';
+import { buildSearchQuery, resolveOrderBy, toFtsMatchFromTokens } from './search_query.js';
+
+export { getRecommendations, normalizeQuery, resolveMappedCode, resolveSearch } from './search_resolve.js';
+export { buildSearchQuery } from './search_query.js';
 
 const DEFAULT_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
 
@@ -70,87 +80,8 @@ type FallbackReason =
   | 'national_text_match'
   | 'category_fallback';
 
-const AUDIT_NODES: Record<string, string> = {
-  'SURGERY': '27447',
-  'IMAGING': '70551',
-  'LABS': '80053',
-  'EMERGENCY': '99283',
-  'MATERNITY': '59400',
-  'GENERAL': '12001',
-  'COLON': '45378',
-  'CARDIAC': '99285',
-  'XRAY': '71045',
-  'CT': '74177',
-  'HIP': '27130'
-};
-
-const CATEGORY_FALLBACK: Record<string, string> = {
-  'Emergency': AUDIT_NODES.EMERGENCY,
-  'Imaging': AUDIT_NODES.IMAGING,
-  'Lab Work': AUDIT_NODES.LABS,
-  'Surgery': AUDIT_NODES.SURGERY,
-  'Maternity': AUDIT_NODES.MATERNITY,
-  'Cardiology': AUDIT_NODES.CARDIAC,
-  'Mental Health': '90791',
-  'Physical Therapy': AUDIT_NODES.GENERAL,
-  'Preventive': '99213',
-  'Sleep': '95810'
-};
-
-const BASE_MAPPING: Record<string, string> = {
-  'knee replacement': '27447',
-  'hip replacement': '27130',
-  'mri': '70551',
-  'brain mri': '70551',
-  'mri brain': '70551',
-  'ct scan': '74177',
-  'cat scan': '74177',
-  'xray': '71045',
-  'x-ray': '71045',
-  'chest x-ray': '71045',
-  'blood work': '80053',
-  'metabolic panel': '80053',
-  'cmp': '80053',
-  'colonoscopy': '45378',
-  'emergency': '99283',
-  'er': '99283',
-  'er visit': '99283',
-  'severe er': '99285',
-  'heart attack': '99285',
-  'cardiac emergency': '99285',
-  'childbirth': '59400',
-  'birth': '59400',
-  'labor': '59400',
-  'stitches': '12001',
-  'wound': '12001',
-  'flu shot': '90686',
-  'flu vaccine': '90686',
-  'influenza vaccine': '90686',
-  'shot': '96372',
-  'injection': '96372'
-};
-
-CPT_CATALOG.forEach(entry => {
-    if (!BASE_MAPPING[entry.code]) {
-    BASE_MAPPING[entry.code] = entry.code;
-    }
-});
-
-export const SMART_MAPPING: Record<string, string> = {
-  ...PLAIN_TO_CODE,
-  ...BASE_MAPPING,
-};
-
 function markFallback(rows: any[], reason: FallbackReason, label: string): any[] {
   return rows.map((r) => ({ ...r, isFallback: true, fallbackReason: reason, fallbackLabel: label }));
-}
-
-function normalizeQuery(input: string): string {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
 }
 
 async function hasAttributionConfidenceColumn(): Promise<boolean> {
@@ -185,95 +116,6 @@ async function hasPricesFtsTable(): Promise<boolean> {
   return pricesFtsTableExists;
 }
 
-function toFtsMatchFromTokens(phrase: string): string {
-  const norm = phrase
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  const parts = norm.split(' ').filter((t) => t.length > 0);
-  if (parts.length === 0) return '';
-  return parts
-    .map((t) => {
-      const esc = t.replace(/"/g, '""');
-      return `"${esc}"*`;
-    })
-    .join(' AND ');
-}
-
-function resolveMappedCode(rawQuery: string): string {
-  const norm = normalizeQuery(rawQuery);
-  if (!norm) return '';
-
-  const direct = SMART_MAPPING[norm] || BASE_MAPPING[norm];
-  if (direct) return direct;
-
-  if (/^[a-z]?\d{4,5}$/i.test(norm)) {
-    return norm.toUpperCase();
-  }
-
-  const catalogMatch = CPT_CATALOG.find(entry => {
-    const plain = entry.plain.toLowerCase();
-    const technical = entry.technical.toLowerCase();
-    return plain === norm || technical === norm || norm === entry.code;
-  });
-  if (catalogMatch) return catalogMatch.code;
-
-  const semanticMatch = Object.entries(SMART_MAPPING)
-    .filter(([key]) => key.length > 3 && (norm.includes(key) || key.includes(norm)))
-    .sort((a, b) => b[0].length - a[0].length)[0];
-  if (semanticMatch) return semanticMatch[1];
-
-  return norm;
-}
-
-export function getRecommendations(query: string) {
-  const norm = query.toLowerCase().trim();
-  if (norm.length < 1) return [];
-  
-  const results: { query: string; code: string; plain: string }[] = [];
-  const seenCodes = new Set<string>();
-
-  const entries = Object.entries(SMART_MAPPING)
-    .filter(([key]) => {
-      const k = key.toLowerCase();
-      if (norm.length <= 2) {
-        return k.startsWith(norm) || k.split(' ').some((w) => w.startsWith(norm));
-      }
-      return k.includes(norm);
-    })
-    .sort((a, b) => {
-      const ak = a[0].toLowerCase();
-      const bk = b[0].toLowerCase();
-
-      const aStarts = ak.startsWith(norm) ? 1 : 0;
-      const bStarts = bk.startsWith(norm) ? 1 : 0;
-      if (aStarts !== bStarts) return bStarts - aStarts;
-
-      const aWordStarts = ak.split(' ').some((w) => w.startsWith(norm)) ? 1 : 0;
-      const bWordStarts = bk.split(' ').some((w) => w.startsWith(norm)) ? 1 : 0;
-      if (aWordStarts !== bWordStarts) return bWordStarts - aWordStarts;
-
-      return ak.localeCompare(bk);
-    });
-
-  for (const [key, code] of entries) {
-    if (!seenCodes.has(code)) {
-      seenCodes.add(code);
-      const entry = CPT_CATALOG.find(e => e.code === code);
-      results.push({ query: key, code, plain: entry?.plain || key });
-      if (results.length >= 8) break;
-    }
-  }
-  return results;
-}
-
-function resolveOrderBy(sort: SearchSort): string {
-  if (sort === 'price-desc') return 'p.cash_price DESC';
-  if (sort === 'score-desc') return 'score DESC, p.cash_price DESC';
-  return 'p.cash_price ASC';
-}
-
 function buildQuery(
   query: string,
   state: string = '',
@@ -284,70 +126,18 @@ function buildQuery(
   limit: number = DEFAULT_SEARCH_PAGE_SIZE,
   offset: number = 0,
   useFts: boolean = false
-): { sql: string; params: any[]; mapped: string; usedFts: boolean } {
-  const norm = normalizeQuery(query);
-  const mappedCpt = resolveMappedCode(norm);
-  const isNumericCpt = mappedCpt.length > 0 && /^[A-Z]?\d{4,5}$/i.test(mappedCpt);
-  const ftsQ =
-    useFts && !isNumericCpt && mappedCpt.length > 0
-      ? toFtsMatchFromTokens(mappedCpt) || toFtsMatchFromTokens(norm)
-      : '';
-  const usedFts = Boolean(ftsQ);
-
-  const baseFrom = usedFts
-    ? `FROM prices p
-    INNER JOIN prices_fts fts ON fts.rowid = p.rowid
-    LEFT JOIN hospitals h ON h.ccn = p.ein
-    LEFT JOIN compliance c ON c.ccn = h.ccn`
-    : `FROM prices p
-    LEFT JOIN hospitals h ON h.ccn = p.ein
-    LEFT JOIN compliance c ON c.ccn = h.ccn`;
-
-  let sql = `
-    SELECT
-      p.*, h.ccn, h.website, h.zip_code,
-      COALESCE(h.city, p.hospital_name) as city,
-      h.state as state,
-      COALESCE(c.score, 0) as score
-    ${baseFrom}
-    WHERE p.cash_price IS NOT NULL
-      AND p.cash_price > 0
-  `;
-  const params: any[] = [];
-
-  if (withAttributionConfidence) {
-    sql += ` AND COALESCE(p.attribution_confidence, 1.0) >= ?`;
-    params.push(minConfidence);
-  }
-
-  if (mappedCpt.length > 0) {
-    if (isNumericCpt) {
-      sql += ` AND (p.cpt_code = ? OR p.cpt_code LIKE ? OR p.cpt_code LIKE ?)`;
-      params.push(mappedCpt, `${mappedCpt}-%`, `${mappedCpt} %`);
-    } else if (usedFts && ftsQ) {
-      sql += ` AND (prices_fts MATCH ? OR p.cpt_code LIKE ?)`;
-      params.push(ftsQ, `%${mappedCpt}%`);
-    } else {
-      sql += ` AND (p.description LIKE ? OR p.cpt_code LIKE ?)`;
-      params.push(`%${mappedCpt}%`, `%${mappedCpt}%`);
-    }
-  }
-
-  if (state) {
-    sql += ` AND h.state = ?`;
-    params.push(state.toUpperCase());
-  }
-
-  if (zip) {
-    const zipPrefix = zip.substring(0, 3);
-    if (zipPrefix.length === 3) {
-      sql += ` AND h.zip_code LIKE ?`;
-      params.push(`${zipPrefix}%`);
-    }
-  }
-
-  sql += ` ORDER BY ${resolveOrderBy(sort)} LIMIT ${limit} OFFSET ${offset}`;
-  return { sql, params, mapped: mappedCpt, usedFts };
+) {
+  return buildSearchQuery(
+    query,
+    state,
+    zip,
+    minConfidence,
+    withAttributionConfidence,
+    sort,
+    limit,
+    offset,
+    useFts
+  );
 }
 
 async function countForQuery(w: any, sql: string, params: any[]): Promise<number> {

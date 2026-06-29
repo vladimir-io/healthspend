@@ -5,7 +5,7 @@ import { join } from 'node:path';
 const projectRoot = join(process.cwd(), '..');
 const webRoot = process.cwd();
 const dbPath = join(webRoot, 'public', 'audit_data.db');
-const dbSource = readFileSync(join(webRoot, 'src', 'db.ts'), 'utf8');
+const dbSource = readFileSync(join(webRoot, 'src', 'search_resolve.ts'), 'utf8');
 
 const failures = [];
 const warnings = [];
@@ -37,10 +37,9 @@ function asInt(v) {
 console.log('Running search regression checks...');
 
 // Logic invariants (deterministic, source-level)
-assert(dbSource.includes('BASE_MAPPING[entry.code] = entry.code;'), 'CPT self-mapping invariant missing');
-assert(dbSource.includes('No generic baseline fallback'), 'Generic baseline fallback guard missing');
-assert(dbSource.includes('h.zip_code LIKE ?'), 'ZIP regional filter invariant missing');
-assert(dbSource.includes('fallbackReason'), 'Fallback reason metadata invariant missing');
+assert(dbSource.includes('INTENT_MULTI'), 'Multi-intent search bundles missing');
+assert(dbSource.includes('extractZipFromQuery'), 'CPT/ZIP disambiguation missing');
+assert(dbSource.includes('heart attack'), 'Heart attack intent mapping missing');
 
 // Data invariants (deterministic against current DB snapshot)
 const negativeOrZero = asInt(sqlScalar('SELECT COUNT(*) FROM prices WHERE cash_price IS NULL OR cash_price <= 0;'));

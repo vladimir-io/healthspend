@@ -1,4 +1,5 @@
-import { enrichSearchStats, getRecommendations, searchPricesWithMeta } from '../db';
+import { enrichSearchStats, getRecommendations, resolveSearch, searchPricesWithMeta } from '../db';
+import { extractZipFromQuery } from '../search_resolve';
 import { NPI_CONFIDENCE_THRESHOLD } from '../config';
 import { recordRum } from '../rum';
 import { hospitalVisibilityPath } from '../visibility_url';
@@ -175,10 +176,9 @@ export async function performSearch(query: string, state: string = '') {
   resultsContainer.classList.add('hidden');
     setSearchLoading(true);
 
-    // ZIP Extraction Logic
-    const zipMatch = query.match(/\b\d{5}\b/);
-    const searchZip = zipMatch ? zipMatch[0] : '';
-    const cleanQuery = query.replace(/\b\d{5}\b/, '').trim();
+    // ZIP extraction (CPT codes like 99285 must not be treated as ZIPs)
+    const { zip: searchZip, cleanQuery } = extractZipFromQuery(query);
+    const resolved = resolveSearch(cleanQuery || query);
 
     try {
       const minConfidence = SEARCH_CONFIDENCE_THRESHOLD;
@@ -287,7 +287,8 @@ export async function performSearch(query: string, state: string = '') {
             const auditLabel = document.getElementById('results-audit-label');
             if (auditLabel) {
               let label = state ? `${state} prices` : 'National prices';
-              if (searchZip) label = `Near ${searchZip}`;
+              if (searchZip) label = `Near ZIP ${searchZip}`;
+              else if (resolved.displayLabel) label = resolved.displayLabel;
               auditLabel.textContent = label;
             }
             applySortAndRender();
