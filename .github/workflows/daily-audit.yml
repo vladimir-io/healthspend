@@ -32,6 +32,9 @@ env:
 jobs:
   setup:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       states: ${{ steps.states.outputs.states }}
     steps:
@@ -47,6 +50,12 @@ jobs:
       - name: Fetch discovery inputs (once per workflow)
         run: python3 scripts/fetch_discovery_inputs.py
 
+      - name: Fetch MRF URL index from latest weekly build
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/fetch_mrf_index_artifact.sh
+
       - uses: actions/upload-artifact@v4
         with:
           name: discovery-inputs
@@ -54,6 +63,14 @@ jobs:
             data/discovery
             hospitals.csv
           retention-days: 2
+
+      - uses: actions/upload-artifact@v4
+        continue-on-error: true
+        with:
+          name: mrf-url-index
+          path: data/mrf_url_index.sqlite
+          retention-days: 2
+          if-no-files-found: ignore
 
       - id: states
         run: |
@@ -137,6 +154,13 @@ jobs:
           else
             echo "No mrf-url-index artifact — run 'Build MRF URL Index' workflow first"
           fi
+
+      - name: Run compliance audit for ${{ matrix.state }}
+        continue-on-error: true
+        run: |
+          cd scraper
+          cargo run --release --bin scraper -- --audit-only --state ${{ matrix.state }}
+          cd ..
 
       - name: Seed scraper hospitals for ${{ matrix.state }}
         run: |
@@ -270,6 +294,9 @@ jobs:
 
       - name: Verify dataset artifacts
         id: verify
+        env:
+          # Daily refresh updates compliance + incremental prices; full CPT catalogue is weekly.
+          HS_VERIFY_MIN_CPTS: '10'
         run: python3 scripts/verify_dataset_artifacts.py
 
       - name: Write dataset manifest

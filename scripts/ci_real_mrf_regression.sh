@@ -6,7 +6,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/scraper"
 
 echo "==> Rust parser unit tests"
-cargo test --release parser_json parser_csv fact_writer 2>&1 | tail -40
+for module in parser_json parser_csv fact_writer; do
+  echo "--- cargo test --release $module"
+  cargo test --release "$module" 2>&1 | tail -20
+done
 
 FIXTURES=(
   "data/test_mrf.json:450358"
