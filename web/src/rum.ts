@@ -8,7 +8,8 @@ export type RumEventName =
   | 'db_warm'
   | 'search'
   | 'search_stats'
-  | 'fallback';
+  | 'fallback'
+  | 'page_view';
 
 export type RumPayload = {
   name: RumEventName;
@@ -18,7 +19,37 @@ export type RumPayload = {
 
 const BUFFER_KEY = 'hs_rum_v1';
 const MAX_BUFFER = 120;
-const SAMPLE_RATE = 0.15;
+const PERF_SAMPLE_RATE = 0.15;
+const ENGAGEMENT_EVENTS = new Set<RumEventName>(['search', 'search_stats', 'page_view', 'fallback']);
+
+function sessionContext(): Record<string, string> {
+  const params = new URLSearchParams(location.search);
+  const ctx: Record<string, string> = {};
+  const utmSource = params.get('utm_source');
+  const utmMedium = params.get('utm_medium');
+  const utmCampaign = params.get('utm_campaign');
+  const state = params.get('state');
+  if (utmSource) ctx.utm_source = utmSource.slice(0, 80);
+  if (utmMedium) ctx.utm_medium = utmMedium.slice(0, 80);
+  if (utmCampaign) ctx.utm_campaign = utmCampaign.slice(0, 80);
+  if (state) ctx.state = state.slice(0, 4).toUpperCase();
+  if (document.referrer) {
+    try {
+      const ref = new URL(document.referrer);
+      if (ref.hostname !== location.hostname) {
+        ctx.referrer = ref.hostname.slice(0, 120);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return ctx;
+}
+
+function shouldBeacon(name: RumEventName): boolean {
+  if (ENGAGEMENT_EVENTS.has(name)) return true;
+  return Math.random() <= PERF_SAMPLE_RATE;
+}
 
 type RumBuffer = { events: RumPayload[]; updatedAt: string };
 
@@ -53,20 +84,34 @@ export function recordRum(event: RumPayload): void {
     console.debug('[rum]', event.name, Math.round(event.ms), event.meta ?? '');
   }
 
-  if (Math.random() > SAMPLE_RATE) return;
+  if (!shouldBeacon(event.name)) return;
+
   const body = JSON.stringify({
-  v: 1,
+    v: 1,
     ...event,
+    meta: { ...sessionContext(), ...(event.meta ?? {}) },
     path: location.pathname + location.hash,
     ts: Date.now(),
   });
+
   try {
     if (navigator.sendBeacon) {
       navigator.sendBeacon('/api/v1/rum', body);
+      return;
     }
+    void fetch('/api/v1/rum', {
+      method: 'POST',
+      body,
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch {
     /* no endpoint in static deploy */
   }
+}
+
+export function recordPageView(route: string): void {
+  recordRum({ name: 'page_view', ms: 0, meta: { route } });
 }
 
 export function getRumSummary(): {

@@ -1,9 +1,11 @@
+import { recordPageView } from '../rum';
 import { ensureDeferredView } from './deferred_views';
 import { setupNavigation } from './nav';
 import { performSearch } from './search_controller';
 
 export function setupRouting(): void {
   setupNavigation((route) => {
+    recordPageView(route);
     void ensureDeferredView(route);
   });
 
