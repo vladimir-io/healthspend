@@ -40,6 +40,12 @@ healthspend/
 └── docs/                     # Methodology, pipeline, legal
 ```
 
+## Documentation
+
+- [Methodology](docs/METHODOLOGY.md) — data sources and scoring
+- [Operations](docs/OPERATIONS.md) — deploy, RUM analytics, WAF, pipelines
+- [Legal](docs/LEGAL.md) — disclaimers
+
 ## Tech stack
 
 - **Rust** (`scraper`) — high-throughput MRF parsing and auditing

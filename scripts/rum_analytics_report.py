@@ -139,12 +139,16 @@ def main() -> int:
     search_n = 0
     search_ms = 0.0
     db_warm: dict[str, tuple[int, float]] = defaultdict(lambda: (0, 0.0))
+    funnel: dict[str, int] = defaultdict(int)
+    dispute_channels: dict[str, int] = defaultdict(int)
 
     event_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):event:(.+)$")
     path_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):path:(.+)$")
     route_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):route:(.+)$")
     src_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):src:(.+)$")
     ref_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):ref:(.+)$")
+    funnel_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):funnel:(.+)$")
+    dispute_send_re = re.compile(r"^d:(\d{4}-\d{2}-\d{2}):dispute_send:(.+)$")
 
     for key, count in values.items():
         if m := event_re.match(key):
@@ -162,6 +166,12 @@ def main() -> int:
             continue
         if m := ref_re.match(key):
             referrers[m.group(2)] += count
+            continue
+        if m := funnel_re.match(key):
+            funnel[m.group(2)] += count
+            continue
+        if m := dispute_send_re.match(key):
+            dispute_channels[m.group(2)] += count
             continue
         if key.endswith(":search:n"):
             search_n += count
@@ -197,6 +207,22 @@ def main() -> int:
 
     median = round(search_ms / search_n) if search_n else 0
     print_rows("Search performance", [(search_n, median)], ("searches", "avg_ms"))
+
+    searches = events.get("search", 0)
+    conversions = funnel.get("search_to_dispute", 0)
+    rate = f"{(100 * conversions / searches):.1f}%" if searches else "—"
+    print_rows(
+        "Search → dispute funnel",
+        [
+            (searches, funnel.get("dispute_open", 0), conversions, funnel.get("dispute_send", 0), rate),
+        ],
+        ("searches", "dispute_open", "search_to_dispute", "dispute_send", "conv_rate"),
+    )
+    print_rows(
+        "Dispute send channel",
+        sorted(((k, v) for k, v in dispute_channels.items()), key=lambda x: -x[1]),
+        ("channel", "sends"),
+    )
 
     warm_rows = []
     for tier, (n, ms) in sorted(db_warm.items(), key=lambda x: -x[1][0]):

@@ -20,6 +20,9 @@ const ALLOWED = new Set([
   'search_stats',
   'fallback',
   'page_view',
+  'dispute_open',
+  'dispute_send',
+  'search_to_dispute',
 ]);
 
 const TTL_SECONDS = 60 * 60 * 24 * 120; // 120 days
@@ -66,6 +69,23 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (name === 'search' && ms > 0) {
     await bump(env, `d:${day}:search:n`);
     await bumpSum(env, `d:${day}:search:ms_sum`, ms);
+  }
+
+  if (name === 'search_to_dispute') {
+    await bump(env, `d:${day}:funnel:search_to_dispute`);
+  }
+
+  if (name === 'dispute_open') {
+    await bump(env, `d:${day}:funnel:dispute_open`);
+  }
+
+  if (name === 'dispute_send') {
+    await bump(env, `d:${day}:funnel:dispute_send`);
+    const channel =
+      body.meta && typeof body.meta.channel === 'string'
+        ? safeSegment(body.meta.channel, 20)
+        : 'unknown';
+    await bump(env, `d:${day}:dispute_send:${channel}`);
   }
 
   if (name === 'db_warm' && ms > 0) {

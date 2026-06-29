@@ -9,7 +9,10 @@ export type RumEventName =
   | 'search'
   | 'search_stats'
   | 'fallback'
-  | 'page_view';
+  | 'page_view'
+  | 'dispute_open'
+  | 'dispute_send'
+  | 'search_to_dispute';
 
 export type RumPayload = {
   name: RumEventName;
@@ -20,7 +23,15 @@ export type RumPayload = {
 const BUFFER_KEY = 'hs_rum_v1';
 const MAX_BUFFER = 120;
 const PERF_SAMPLE_RATE = 0.15;
-const ENGAGEMENT_EVENTS = new Set<RumEventName>(['search', 'search_stats', 'page_view', 'fallback']);
+const ENGAGEMENT_EVENTS = new Set<RumEventName>([
+  'search',
+  'search_stats',
+  'page_view',
+  'fallback',
+  'dispute_open',
+  'dispute_send',
+  'search_to_dispute',
+]);
 
 function sessionContext(): Record<string, string> {
   const params = new URLSearchParams(location.search);
@@ -112,6 +123,33 @@ export function recordRum(event: RumPayload): void {
 
 export function recordPageView(route: string): void {
   recordRum({ name: 'page_view', ms: 0, meta: { route } });
+}
+
+const SEARCH_SESSION_KEY = 'hs_searched_v1';
+
+/** Call after a successful price search so dispute opens count toward conversion. */
+export function markSearchSession(): void {
+  try {
+    sessionStorage.setItem(SEARCH_SESSION_KEY, String(Date.now()));
+  } catch {
+    /* private mode */
+  }
+}
+
+export function recordDisputeOpen(meta?: Record<string, string | number | boolean>): void {
+  recordRum({ name: 'dispute_open', ms: 0, meta });
+  try {
+    if (sessionStorage.getItem(SEARCH_SESSION_KEY)) {
+      recordRum({ name: 'search_to_dispute', ms: 0, meta });
+      sessionStorage.removeItem(SEARCH_SESSION_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+export function recordDisputeSend(channel: 'gmail' | 'outlook' | 'copy'): void {
+  recordRum({ name: 'dispute_send', ms: 0, meta: { channel } });
 }
 
 export function getRumSummary(): {

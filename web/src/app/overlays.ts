@@ -3,6 +3,7 @@ import {
   buildClaimRateDraft,
   type ClaimRateIntent,
 } from '../claim_rate_letter.js';
+import { recordDisputeOpen, recordDisputeSend } from '../rum';
 import { closeAllSheets, closeSheet, openSheet } from './micro.js';
 
 let lastDisputeRow: Record<string, unknown> | null = null;
@@ -74,6 +75,10 @@ export function handleDispute(row: Record<string, unknown>) {
     };
   }
   if (disputeOverlay) openSheet(disputeOverlay);
+  recordDisputeOpen({
+    cpt: String(row.cpt_code ?? ''),
+    intent: getDisputeIntent(),
+  });
 }
 
 export function handleDraft(row: Record<string, unknown>, observedReason: string) {
@@ -129,6 +134,16 @@ export function setupOverlays(): void {
 
   document.getElementById('dispute-draft')?.addEventListener('input', () => syncDisputeMailLinks());
   document.getElementById('dispute-to-email')?.addEventListener('input', () => syncDisputeMailLinks());
+
+  document.getElementById('btn-dispute-gmail')?.addEventListener('click', () => {
+    recordDisputeSend('gmail');
+  });
+  document.getElementById('btn-dispute-outlook')?.addEventListener('click', () => {
+    recordDisputeSend('outlook');
+  });
+  document.getElementById('btn-dispute-copy')?.addEventListener('click', () => {
+    recordDisputeSend('copy');
+  });
 
   btnCopy?.addEventListener('click', () => {
     copyToClipboard(letterDraft?.value ?? '');

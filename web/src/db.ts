@@ -7,7 +7,7 @@ import {
   MAX_SEARCH_FALLBACK_ROUNDS,
   NPI_CONFIDENCE_THRESHOLD,
 } from './config';
-import { recordRum } from './rum';
+import { markSearchSession, recordRum } from './rum';
 
 const DEFAULT_CONFIDENCE_THRESHOLD = NPI_CONFIDENCE_THRESHOLD;
 
@@ -766,6 +766,9 @@ export async function searchPricesWithMeta(
     ms: queryMs,
     meta: { fallbacks: fallbackRounds, rows: results.length },
   });
+  if (results.length > 0) {
+    markSearchSession();
+  }
 
   let total: number;
   let market: SearchResponse['market'] = null;
