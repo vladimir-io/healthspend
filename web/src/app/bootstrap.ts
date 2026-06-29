@@ -5,6 +5,7 @@ import { setupOverlays } from './overlays';
 import { setupMicroInteractions } from './micro';
 import { setupHelp } from './help';
 import { setupHeroIntents } from './hero_intents';
+import { setupDataFreshness } from './data_freshness';
 import { setupDatabaseStatusBanner } from './db_status';
 import { warmDatabaseNow, scheduleIdleDatabaseWarm } from './db_warm';
 import { setupRouting } from './routing';
@@ -28,6 +29,7 @@ export function bootstrap(): void {
   setupHelp();
   setupHeroIntents();
   setupDatabaseStatusBanner();
+  setupDataFreshness();
 
   const hasSearchDeepLink = Boolean(new URLSearchParams(window.location.search).get('q')?.trim());
   if (hasSearchDeepLink) {

@@ -5,6 +5,10 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+curl -fsSL \
+  "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json" \
+  -o web/public/dataset_manifest.json || true
+
 python3 scripts/patch_visibility_seo.py
 
 cd web

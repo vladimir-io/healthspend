@@ -25,8 +25,16 @@ jobs:
           cache-dependency-path: web/package-lock.json
 
       - name: Verify Cloudflare token
-        continue-on-error: true
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: bash scripts/verify_cloudflare_token.sh
+
+      - name: Sync dataset manifest
+        run: |
+          curl -fsSL \
+            "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json" \
+            -o web/public/dataset_manifest.json
 
       - name: Install and build
         working-directory: web

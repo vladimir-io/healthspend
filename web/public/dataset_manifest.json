@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-04T05:50:21.026012+00:00",
+  "generated_at": "2026-06-29T11:52:17.582144+00:00",
   "hot_cpt_codes": [
     "27447",
     "27130",
@@ -22,19 +22,19 @@
     "audit_data.db": {
       "role": "full_price_and_compliance_ledger",
       "present": true,
-      "size_bytes": 2681110528,
-      "price_rows": 11807280,
+      "size_bytes": 32894976,
+      "price_rows": 59133,
       "hospital_rows": 39937,
-      "distinct_cpt_codes": 410172
+      "distinct_cpt_codes": 11
     },
     "audit_hot.db": {
       "role": "top_cpt_hot_shard_for_client_search",
       "hot_cpt_filter_count": 16,
       "present": true,
-      "size_bytes": 13148160,
-      "price_rows": 296,
+      "size_bytes": 25763840,
+      "price_rows": 59133,
       "hospital_rows": 39937,
-      "distinct_cpt_codes": 16
+      "distinct_cpt_codes": 11
     }
   }
 }

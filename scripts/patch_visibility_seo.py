@@ -61,6 +61,25 @@ REPLACEMENTS = [
     ("Healthcare Pricing Ledger", "Hospital price transparency data"),
 ]
 
+SCORE_VAL_RE = re.compile(r'<div class="score-val">(\d+)')
+VIOLATION_BLOCK_RE = re.compile(
+    r'\s*<a href="https://twitter\.com/intent/tweet\?[^"]*"[^>]*class="(?:oracle-btn|cta-btn)"[^>]*>'
+    r'Report Violation</a>\s*',
+    re.IGNORECASE,
+)
+
+
+def patch_violation_link(text: str) -> str:
+    """Drop misleading violation tweets on hospitals that score ≥50."""
+    score_m = SCORE_VAL_RE.search(text)
+    score = int(score_m.group(1)) if score_m else 0
+    if score >= 50:
+        text = VIOLATION_BLOCK_RE.sub("\n", text)
+    text = text.replace('class="oracle-btn"', 'class="cta-btn"')
+    text = text.replace(".oracle-btn", ".cta-btn")
+    return text
+
+
 CTA_BLOCK = """
 <div class="hs-cta" style="background:var(--bg-card, rgba(255,255,255,0.04)); border:1px solid var(--border, rgba(255,255,255,0.1)); border-radius:20px; padding:32px 24px; text-align:center; margin:48px 0;">
   <h2 style="color:#fff; font-size:1.35rem; font-weight:800; margin:0 0 10px; letter-spacing:-0.03em;">Compare full prices</h2>
@@ -131,6 +150,7 @@ def patch_node(path: Path) -> bool:
     text = path.read_text(encoding="utf-8")
     orig = text
     text = apply_replacements(text)
+    text = patch_violation_link(text)
 
     canonical = f"{BASE}/visibility/{path.name}"
     title_m = TITLE_RE.search(text)
@@ -157,6 +177,7 @@ def patch_state(path: Path) -> bool:
     state_name = STATE_NAMES.get(code, code.upper())
 
     text = apply_replacements(text)
+    text = patch_violation_link(text)
     text = text.replace(f"{state_name} Pricing Oracle", f"Hospital prices in {state_name}")
     text = text.replace(f"{state_name} Hospital Price Transparency Index", f"Hospital prices in {state_name}")
 
