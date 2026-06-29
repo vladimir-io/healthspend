@@ -557,6 +557,17 @@ body::before {
   font-weight: 600;
 }
 
+.result-visibility-link {
+  color: var(--text-tertiary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.result-visibility-link:hover {
+  color: var(--yc-orange);
+}
+
 .result-price-block {
   text-align: right;
 }

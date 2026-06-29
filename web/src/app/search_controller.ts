@@ -1,6 +1,7 @@
 import { enrichSearchStats, getRecommendations, searchPricesWithMeta } from '../db';
 import { NPI_CONFIDENCE_THRESHOLD } from '../config';
 import { recordRum } from '../rum';
+import { hospitalVisibilityPath } from '../visibility_url';
 import { FALLBACK_LABELS, formatResultsSummary } from './copy';
 import { buildSearchShareUrl } from './share_url';
 import { handleDispute, handleDraft } from './overlays';
@@ -417,6 +418,10 @@ function renderResults(results: any[]) {
         const perfectScoreClass = score === 100 ? 'perfect-audit-card' : '';
         const perfectScoreBadge = score === 100 ? `<span class="badge-perfect">★ Perfect Audit</span>` : '';
         const auditChipClass = score === 100 ? 'result-audit-chip result-audit-chip--perfect' : 'result-audit-chip';
+        const visibilityPath = hospitalVisibilityPath(row.ccn ?? row.ein);
+        const hospitalPageLink = visibilityPath
+          ? ` &nbsp;·&nbsp; <a href="${visibilityPath}" class="result-visibility-link" rel="noopener">Hospital page</a>`
+          : '';
         const negotiatedPanel = hasNegotiatedIntel ? `
           <div class="negotiated-panel-wrap">
             <button class="negotiated-toggle" type="button" aria-expanded="false" title="Show negotiated rate context">
@@ -455,7 +460,7 @@ function renderResults(results: any[]) {
                 <div class="result-main-col">
                     <p class="result-label">Procedure ${fallbackBadge}</p>
                     <p class="result-procedure">${row.description}</p>
-                    <p class="result-hospital">${row.hospital_name} &nbsp;·&nbsp; <span class="result-location">${location}</span> ${perfectScoreBadge}</p>
+                    <p class="result-hospital">${row.hospital_name} &nbsp;·&nbsp; <span class="result-location">${location}</span>${hospitalPageLink} ${perfectScoreBadge}</p>
                     <p class="result-attest">${auditText}</p>
                     <div class="result-meta-row">
                       <span class="confidence-pill ${confidenceTone}" title="Confidence for procedure to provider attribution">Confidence ${attributionConfidence}%</span>

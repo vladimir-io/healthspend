@@ -24,6 +24,10 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
+      - name: Verify Cloudflare token
+        continue-on-error: true
+        run: bash scripts/verify_cloudflare_token.sh
+
       - name: Install and build
         working-directory: web
         run: |
@@ -41,4 +45,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: "3.90.0"
           command: pages deploy web/dist --project-name=healthspend --branch=main

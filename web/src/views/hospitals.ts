@@ -8,6 +8,7 @@ import {
 import { handleComplaint } from '../mail.js';
 import { getHospitalsTab, setHospitalsTab, type HospitalsTab } from '../app/nav';
 import { showAuditDetail } from './detail';
+import { hospitalVisibilityPath } from '../visibility_url';
 
 const STATES = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME',
@@ -105,12 +106,16 @@ export async function renderHospitals(viewId: string): Promise<void> {
         style="background:${c.ok(row) ? 'var(--rh-green)' : 'var(--yc-orange)'};
         box-shadow:0 0 6px ${c.ok(row) ? 'var(--rh-green-glow)' : 'var(--yc-orange-glow)'};"></div>`
     ).join('');
+    const pagePath = hospitalVisibilityPath(row.ccn);
+    const pageLink = pagePath
+      ? ` · <a href="${pagePath}" class="result-visibility-link" rel="noopener">Prices page</a>`
+      : '';
     return `
       <div class="audit-row ${sc === 100 ? 'perfect-audit-card' : ''}" data-ccn="${row.ccn}"
         style="grid-template-columns:1fr 56px 108px 120px;">
         <div class="audit-identity">
           <h3>${row.name}</h3>
-          <p>${row.city}, ${row.state} · <span style="font-family:var(--font-mono);font-size:0.68rem;">CCN ${row.ccn}</span></p>
+          <p>${row.city}, ${row.state} · <span style="font-family:var(--font-mono);font-size:0.68rem;">CCN ${row.ccn}</span>${pageLink}</p>
         </div>
         <div class="score-ring" style="color:${col};"><span class="val" style="color:${col};">${sc}</span><span class="lbl">score</span></div>
         <div class="status-dots" aria-label="Reporting signals">${dots}</div>
