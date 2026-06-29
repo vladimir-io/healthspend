@@ -94,6 +94,17 @@ def _quote_plus(value: str) -> str:
     return quote_plus(value)
 
 
+def with_utm(href: str, medium: str) -> str:
+    if "utm_source=" in href:
+        return href
+    base, frag = (href.split("#", 1) + [""])[:2]
+    sep = "&" if "?" in base else "?"
+    out = f"{base}{sep}utm_source=visibility&utm_medium={medium}"
+    if frag:
+        out += f"#{frag}"
+    return out
+
+
 def ensure_head_tags(text: str, *, canonical: str, og_title: str, og_desc: str) -> str:
     if 'rel="canonical"' not in text:
         block = (
@@ -142,8 +153,8 @@ def node_cta_href(path: Path, text: str) -> str:
         href = f"{BASE}/?q={q}"
         if state:
             href += f"&state={state}"
-        return href + "#search"
-    return f"{BASE}/#search"
+        return with_utm(href + "#search", "hospital")
+    return with_utm(f"{BASE}/#search", "hospital")
 
 
 def patch_node(path: Path) -> bool:
@@ -163,6 +174,15 @@ def patch_node(path: Path) -> bool:
         cta = CTA_BLOCK.format(cta_href=node_cta_href(path, text))
         if "</body>" in text:
             text = text.replace("</body>", cta + "\n</body>", 1)
+    else:
+        href = node_cta_href(path, text)
+        text = re.sub(
+            r'(<div class="hs-cta"[^>]*>.*?<a href=")[^"]+(")',
+            rf"\1{href}\2",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
 
     if text != orig:
         path.write_text(text, encoding="utf-8")
@@ -187,12 +207,21 @@ def patch_state(path: Path) -> bool:
     text = ensure_head_tags(text, canonical=canonical, og_title=og_title, og_desc=og_desc)
 
     if 'class="hs-cta"' not in text:
-        cta_href = f"{BASE}/?state={code.upper()}#search"
+        cta_href = with_utm(f"{BASE}/?state={code.upper()}#search", "state")
         cta = CTA_BLOCK.format(cta_href=cta_href).replace(
             "for this hospital", f"in {state_name}"
         )
         if "</body>" in text:
             text = text.replace("</body>", cta + "\n</body>", 1)
+    else:
+        cta_href = with_utm(f"{BASE}/?state={code.upper()}#search", "state")
+        text = re.sub(
+            r'(<div class="hs-cta"[^>]*>.*?<a href=")[^"]+(")',
+            rf"\1{cta_href}\2",
+            text,
+            count=1,
+            flags=re.DOTALL,
+        )
 
     if text != orig:
         path.write_text(text, encoding="utf-8")

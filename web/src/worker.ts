@@ -1,11 +1,12 @@
 import { createDbWorker } from 'sql.js-httpvfs';
-import { DB_URL, DB_URL_CHAIN, DB_VFS_ADAPTER } from './config';
+import { DB_URL, DB_URL_CHAIN, DB_VFS_ADAPTER, FULL_DB_URL } from './config';
 import { recordRum } from './rum';
 
 const workerUrl = new URL('sql.js-httpvfs/dist/sqlite.worker.js', import.meta.url);
 const wasmUrl   = new URL('sql.js-httpvfs/dist/sql-wasm.wasm', import.meta.url);
 
 const pool = new Map<string, any>();
+let activeTier: 'hot' | 'full' = 'hot';
 
 async function resolveFileSize(dbUrl: string): Promise<number | undefined> {
   const match = dbUrl.match(/datasets\/([^/]+\/[^/]+)\/resolve\/main\/(.*)/);
@@ -48,15 +49,19 @@ export async function getSharedWorker(dbUrl: string = DB_URL, chunkSize: number 
   let lastError: unknown;
   for (const url of chain) {
     const key = `${DB_VFS_ADAPTER}:${url}:${chunkSize}`;
-    if (pool.has(key)) return pool.get(key);
+    if (pool.has(key)) {
+      activeTier = url.includes('audit_hot') ? 'hot' : 'full';
+      return pool.get(key);
+    }
     try {
       const t0 = performance.now();
       const instance = await openWorker(url, chunkSize);
       pool.set(key, instance);
+      activeTier = url.includes('audit_hot') ? 'hot' : 'full';
       recordRum({
         name: 'db_warm',
         ms: performance.now() - t0,
-        meta: { tier: url.includes('audit_hot') ? 'hot' : 'full' },
+        meta: { tier: activeTier },
       });
       return instance;
     } catch (err) {
@@ -64,6 +69,18 @@ export async function getSharedWorker(dbUrl: string = DB_URL, chunkSize: number 
     }
   }
   throw lastError ?? new Error('Failed to open database');
+}
+
+/** Load the full price ledger when a rare procedure needs it (user-initiated). */
+export async function promoteToFullDatabase(chunkSize: number = 262144) {
+  if (activeTier === 'full' && pool.has(`${DB_VFS_ADAPTER}:${FULL_DB_URL}:${chunkSize}`)) {
+    return pool.get(`${DB_VFS_ADAPTER}:${FULL_DB_URL}:${chunkSize}`);
+  }
+  return getSharedWorker(FULL_DB_URL, chunkSize);
+}
+
+export function getDatabaseTier(): 'hot' | 'full' {
+  return activeTier;
 }
 
 /** Prefetch worker + SQLite on search focus (non-blocking). */

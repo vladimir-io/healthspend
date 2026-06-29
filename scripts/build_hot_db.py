@@ -9,11 +9,11 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-# High-traffic CPT codes aligned with web/src/db.ts audit nodes and shortcuts
+# High-traffic CPT codes aligned with web shortcuts and compare landing pages
 HOT_CPTS = (
-    "27447", "27130", "70551", "74177", "71045", "80053", "45378",
-    "99283", "99285", "59400", "12001", "90686", "96372", "99213",
-    "90791", "95810",
+    "27447", "27130", "70551", "73721", "74177", "70450", "71045", "71250",
+    "80053", "85025", "45378", "45380", "99283", "99285", "59400", "12001",
+    "90686", "96372", "99213", "76700",
 )
 
 
@@ -39,7 +39,16 @@ def build_hot_db(source: Path, out: Path) -> dict:
         ).fetchone()
         if row and row[0]:
             dst.execute(row[0])
-            dst.execute(f"INSERT INTO {table} SELECT * FROM src.{table}")
+            dst.execute(
+                f"""
+                INSERT INTO {table}
+                SELECT * FROM src.{table}
+                WHERE ccn IN (
+                    SELECT DISTINCT ein FROM src.prices WHERE {cpt_predicate}
+                )
+                """,
+                HOT_CPTS,
+            )
 
     prices_row = src.execute(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name='prices'"

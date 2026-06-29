@@ -11,16 +11,21 @@ export const HOT_DB_URL = import.meta.env.DEV
   ? '/audit_hot.db'
   : `${HF_BASE}/audit_hot.db`;
 
-/** Primary URL; worker falls back to FULL_DB_URL in production if hot shard is unavailable. */
+/** Fast shard for anonymous search — full ledger loads only on explicit upgrade. */
 export const DB_URL = import.meta.env.DEV
-  ? import.meta.env.VITE_USE_HOT_DB === 'true'
-    ? '/audit_hot.db'
-    : '/audit_data.db'
+  ? import.meta.env.VITE_USE_FULL_DB === 'true'
+    ? '/audit_data.db'
+    : '/audit_hot.db'
   : HOT_DB_URL;
 
-export const DB_URL_CHAIN: string[] = import.meta.env.DEV
-  ? [DB_URL]
-  : [HOT_DB_URL, FULL_DB_URL];
+/** Never auto-download the full ledger after a hot open failure. */
+export const DB_URL_CHAIN: string[] = [DB_URL];
+
+export const HOT_CPT_CODES = new Set([
+  '27447', '27130', '70551', '73721', '74177', '70450', '71045', '71250',
+  '80053', '85025', '45378', '45380', '99283', '99285', '59400', '12001',
+  '90686', '96372', '99213', '76700',
+]);
 
 export const NPI_CONFIDENCE_THRESHOLD = 0.95;
 export const DB_VFS_ADAPTER: string = 'sqljs-httpvfs';

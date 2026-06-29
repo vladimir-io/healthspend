@@ -7,6 +7,8 @@ on:
     paths:
       - 'web/**'
       - 'scripts/patch_visibility_seo.py'
+      - 'scripts/generate_compare_pages.py'
+      - 'scripts/rum_analytics_report.py'
       - '.github/workflows/deploy-cloudflare.yml'
 
 jobs:
@@ -36,13 +38,16 @@ jobs:
             "https://huggingface.co/datasets/vladimir-io/healthspend-data/resolve/main/dataset_manifest.json" \
             -o web/public/dataset_manifest.json
 
+      - name: Generate compare SEO pages
+        run: python3 scripts/generate_compare_pages.py
+
+      - name: Patch visibility SEO
+        run: python3 scripts/patch_visibility_seo.py || true
+
       - name: Install and build
         working-directory: web
         run: |
           npm ci
-          cd ..
-          python3 scripts/patch_visibility_seo.py || true
-          cd web
           npm run build
 
       - name: Publish to Cloudflare Pages
@@ -54,4 +59,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           wranglerVersion: "3.90.0"
-          command: pages deploy web/dist --project-name=healthspend --branch=main
+          workingDirectory: web
+          command: pages deploy dist --project-name=healthspend --branch=main

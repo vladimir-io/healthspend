@@ -7,7 +7,7 @@ import { setupHelp } from './help';
 import { setupHeroIntents } from './hero_intents';
 import { setupDataFreshness } from './data_freshness';
 import { setupDatabaseStatusBanner } from './db_status';
-import { warmDatabaseNow, scheduleIdleDatabaseWarm } from './db_warm';
+import { warmDatabaseNow } from './db_warm';
 import { setupRouting } from './routing';
 import { applyUrlParamsOnLoad } from './url_params';
 import { setupDynamicYear, setupThemeToggle } from './theme';
@@ -31,13 +31,7 @@ export function bootstrap(): void {
   setupDatabaseStatusBanner();
   setupDataFreshness();
 
-  const hasSearchDeepLink = Boolean(new URLSearchParams(window.location.search).get('q')?.trim());
-  if (hasSearchDeepLink) {
-    warmDatabaseNow();
-  } else {
-    scheduleIdleDatabaseWarm();
-  }
-
+  warmDatabaseNow();
   applyUrlParamsOnLoad();
 
   const input = document.getElementById('search-input');
