@@ -22,8 +22,9 @@ export function setupHeroIntents(): void {
       if (intent === 'bill' && searchInput) {
         const billed = document.getElementById('dispute-intent-billed') as HTMLInputElement | null;
         if (billed) billed.checked = true;
-        searchInput.value = 'MRI';
-        void performSearch('MRI', state);
+        searchInput.value = '';
+        searchInput.placeholder = 'Procedure on your bill (e.g. MRI, blood panel)';
+        searchInput.focus();
       } else if (intent === 'shop' && searchInput) {
         searchInput.value = 'Metabolic Panel';
         searchInput.focus();

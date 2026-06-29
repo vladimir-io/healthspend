@@ -80,10 +80,17 @@ export function setupDynamicYear(): void {
   const ldJson = document.getElementById('ld-json');
   if (ldJson) {
     try {
-      const data = JSON.parse(ldJson.textContent || '{}');
-      if (data.description) {
-        data.description = data.description.replace(/2026/g, year.toString());
-        ldJson.textContent = JSON.stringify(data, null, 2);
+      const parsed = JSON.parse(ldJson.textContent || '{}');
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      let changed = false;
+      for (const data of items) {
+        if (typeof data.description === 'string' && data.description.includes('2026')) {
+          data.description = data.description.replace(/2026/g, year.toString());
+          changed = true;
+        }
+      }
+      if (changed) {
+        ldJson.textContent = JSON.stringify(Array.isArray(parsed) ? items : items[0], null, 2);
       }
     } catch {
       /* ignore */
