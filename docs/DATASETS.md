@@ -25,7 +25,7 @@ Row counts depend on how many hospitals successfully publish parseable MRFs. Wit
 
 ## `audit_hot.db` — top-CPT hot shard
 
-**What it is:** A smaller file for fast browser load (`sql.js-httpvfs`). The web app loads this first, then falls back to `audit_data.db`.
+**What it is:** A smaller file for fast browser load (`sql.js-httpvfs`). Production search opens this shard first (full ledger is opt-in / separate URL).
 
 | Component | Contents |
 |-----------|----------|
@@ -37,7 +37,7 @@ Row counts depend on how many hospitals successfully publish parseable MRFs. Wit
 
 Hot CPT codes:
 
-`27447`, `27130`, `70551`, `74177`, `71045`, `80053`, `45378`, `99283`, `99285`, `59400`, `12001`, `90686`, `96372`, `99213`, `90791`, `95810`
+`27447`, `27130`, `70551`, `73721`, `74177`, `70450`, `71045`, `71250`, `80053`, `85025`, `45378`, `45380`, `99283`, `99285`, `59400`, `12001`, `90686`, `96372`, `99213`, `76700`
 
 If the full ledger only contains a subset of those codes, the hot shard includes every code that exists in source (typically the same 11 codes until ingestion widens).
 

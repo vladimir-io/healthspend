@@ -1,0 +1,11 @@
+# Copy to wrangler.toml (gitignored) for local Pages + RUM KV.
+# Binding name must match web/functions usage: RUM_COUNTERS
+
+name = "healthspend"
+compatibility_date = "2024-04-01"
+pages_build_output_dir = "web/dist"
+
+[[kv_namespaces]]
+binding = "RUM_COUNTERS"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+preview_id = "REPLACE_WITH_PREVIEW_KV_NAMESPACE_ID"

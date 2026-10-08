@@ -62,6 +62,32 @@ function shouldBeacon(name: RumEventName): boolean {
   return Math.random() <= PERF_SAMPLE_RATE;
 }
 
+/** Drop procedure codes and free-text that could identify a care episode. */
+function sanitizeMeta(
+  meta: Record<string, string | number | boolean>,
+): Record<string, string | number | boolean> {
+  const out: Record<string, string | number | boolean> = {};
+  for (const [key, value] of Object.entries(meta)) {
+    const k = key.toLowerCase();
+    if (
+      k === 'cpt' ||
+      k === 'cpt_code' ||
+      k.includes('code') ||
+      k.includes('query') ||
+      k.includes('hospital') ||
+      k.includes('name')
+    ) {
+      continue;
+    }
+    if (typeof value === 'string') {
+      out[key] = value.slice(0, 80);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
 type RumBuffer = { events: RumPayload[]; updatedAt: string };
 
 function readBuffer(): RumBuffer {
@@ -97,11 +123,13 @@ export function recordRum(event: RumPayload): void {
 
   if (!shouldBeacon(event.name)) return;
 
+  // Pathname only — no hash/query (avoids leaking CPT/search fragments).
   const body = JSON.stringify({
     v: 1,
-    ...event,
-    meta: { ...sessionContext(), ...(event.meta ?? {}) },
-    path: location.pathname + location.hash,
+    name: event.name,
+    ms: event.ms,
+    meta: sanitizeMeta({ ...sessionContext(), ...(event.meta ?? {}) }),
+    path: location.pathname.slice(0, 200),
     ts: Date.now(),
   });
 

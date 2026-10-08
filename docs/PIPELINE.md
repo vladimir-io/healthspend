@@ -90,21 +90,10 @@ python3 scripts/run_audit_pipeline.py \
 
 Only use cleanup for raw downloads. Keep generated SQLite artifacts in place for the app and deploys.
 
-## Optional VFS Adapter
+## Client database adapter
 
-The web worker supports an adapter flag with fallback:
-
-- `VITE_DB_VFS=sqljs-httpvfs` (default)
-- `VITE_DB_VFS=turbolite` (locked to `turbolite@0.2.19` API)
-
-If Turbolite is unavailable, runtime falls back to `sql.js-httpvfs`.
-
-Package/API lock-in test:
-
-```bash
-cd web
-npm run test:turbolite
-```
+Production search uses `sql.js-httpvfs` against Hugging Face SQLite shards
+(`audit_hot.db` by default). There is no alternate VFS adapter in the current build.
 
 ## Benchmarking
 

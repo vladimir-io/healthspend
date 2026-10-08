@@ -99,6 +99,8 @@ playwright-report/
 # Local DB artifacts (published via Hugging Face)
 web/public/audit_data.db
 web/public/audit_hot.db
+# Vite emits to web/dist — never commit hashed bundles under public/
+web/public/assets/
 .venv-hf/
 
 # ── Tracked exceptions ───────────────────────────────────────────────────────

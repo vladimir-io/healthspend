@@ -134,11 +134,48 @@ def patch_json_ld(text: str) -> str:
     return text.replace("Clinical Price Ledger", "Sample published prices")
 
 
+def normalize_page_title(title: str) -> str:
+    """Collapse duplicated 'Hospital prices | Hospital prices' SEO titles."""
+    t = title.strip()
+    t = re.sub(r"\s*\|\s*Hospital prices\s*$", "", t, flags=re.IGNORECASE)
+    t = re.sub(r"\s+Hospital prices\s*$", "", t, flags=re.IGNORECASE)
+    t = t.strip(" |")
+    if not t:
+        return "Hospital prices | Healthspend"
+    if "healthspend" not in t.lower():
+        return f"{t} | Healthspend"
+    return t
+
+
 def apply_replacements(text: str) -> str:
     for old, new in REPLACEMENTS:
         text = text.replace(old, new)
     text = SUBSCRIBE_BLOCK_RE.sub("", text)
-    return patch_json_ld(text)
+    text = patch_json_ld(text)
+
+    def _fix_title(m: re.Match[str]) -> str:
+        return f"<title>{normalize_page_title(m.group(1))}</title>"
+
+    text = TITLE_RE.sub(_fix_title, text, count=1)
+
+    def _fix_meta_title(m: re.Match[str]) -> str:
+        return f'{m.group(1)}{normalize_page_title(m.group(2))}{m.group(3)}'
+
+    text = re.sub(
+        r'(property="og:title"\s+content=")([^"]*)(")',
+        _fix_meta_title,
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r'(name="twitter:title"\s+content=")([^"]*)(")',
+        _fix_meta_title,
+        text,
+        flags=re.IGNORECASE,
+    )
+    # Soften aggressive compliance CTAs for public launch.
+    text = VIOLATION_BLOCK_RE.sub("\n", text)
+    return text
 
 
 def node_cta_href(path: Path, text: str) -> str:

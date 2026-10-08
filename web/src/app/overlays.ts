@@ -76,7 +76,6 @@ export function handleDispute(row: Record<string, unknown>) {
   }
   if (disputeOverlay) openSheet(disputeOverlay);
   recordDisputeOpen({
-    cpt: String(row.cpt_code ?? ''),
     intent: getDisputeIntent(),
   });
 }

@@ -1,13 +1,18 @@
 {
-  "generated_at": "2026-06-29T12:06:04.378847+00:00",
+  "generated_at": "2026-10-08T04:21:45.796519+00:00",
   "hot_cpt_codes": [
     "27447",
     "27130",
     "70551",
+    "73721",
     "74177",
+    "70450",
     "71045",
+    "71250",
     "80053",
+    "85025",
     "45378",
+    "45380",
     "99283",
     "99285",
     "59400",
@@ -15,8 +20,7 @@
     "90686",
     "96372",
     "99213",
-    "90791",
-    "95810"
+    "76700"
   ],
   "artifacts": {
     "audit_data.db": {
@@ -29,11 +33,11 @@
     },
     "audit_hot.db": {
       "role": "top_cpt_hot_shard_for_client_search",
-      "hot_cpt_filter_count": 16,
+      "hot_cpt_filter_count": 20,
       "present": true,
-      "size_bytes": 25763840,
+      "size_bytes": 14622720,
       "price_rows": 59133,
-      "hospital_rows": 39937,
+      "hospital_rows": 5426,
       "distinct_cpt_codes": 11
     }
   }

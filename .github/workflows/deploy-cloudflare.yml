@@ -55,6 +55,8 @@ jobs:
         run: |
           npm ci
           npm run build
+          # Never publish local/HF SQLite stubs from public/ — clients load HF URLs.
+          rm -f dist/*.db dist/*.db-*
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3

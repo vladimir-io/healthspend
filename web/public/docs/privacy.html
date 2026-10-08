@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy · Healthspend</title>
+  <meta name="description" content="How Healthspend handles anonymous usage signals. No accounts, no sale of personal data." />
+  <link rel="canonical" href="https://healthspend.lol/docs/privacy.html" />
+  <style>
+    :root { color-scheme: dark; --bg: #0a0a0a; --fg: #eee; --muted: #999; --accent: #ff6000; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.6; }
+    main { max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+    a { color: var(--accent); }
+    h1 { font-size: 1.75rem; letter-spacing: -0.03em; margin: 0 0 0.5rem; }
+    .lead { color: var(--muted); margin: 0 0 2rem; }
+    h2 { font-size: 1.05rem; margin: 2rem 0 0.5rem; }
+    p, li { color: #ccc; }
+    ul { padding-left: 1.2rem; }
+  </style>
+</head>
+<body>
+  <main>
+    <p><a href="/">← Healthspend</a></p>
+    <h1>Privacy</h1>
+    <p class="lead">No accounts. No advertising profiles. Built for hospital price transparency.</p>
+
+    <h2>What we collect</h2>
+    <p>Optional anonymous product telemetry (RUM) may record:</p>
+    <ul>
+      <li>Page path (no URL hash or query string)</li>
+      <li>Event type (page view, search timing, dispute funnel step)</li>
+      <li>Coarse campaign tags if you arrived via a shared link (<code>utm_*</code>)</li>
+      <li>Referrer hostname only (not the full URL)</li>
+    </ul>
+    <p>We do <strong>not</strong> intentionally collect procedure codes, hospital names, emails, or free-text search queries in telemetry.</p>
+
+    <h2>What we do not do</h2>
+    <ul>
+      <li>No user accounts or login</li>
+      <li>No sale of personal data</li>
+      <li>No third-party ad trackers in the core app</li>
+    </ul>
+
+    <h2>Where data lives</h2>
+    <p>Telemetry counters are stored in Cloudflare KV for operational reliability. Price data is loaded from a public Hugging Face dataset into your browser.</p>
+
+    <h2>Legal</h2>
+    <p>Healthspend is for transparency research and education — not legal, medical, or billing advice. See the in-app legal disclosure and <a href="https://github.com/vladimir-io/healthspend/blob/main/docs/LEGAL.md">LEGAL.md</a>.</p>
+
+    <p class="lead" style="margin-top:2.5rem">Questions: open an issue on <a href="https://github.com/vladimir-io/healthspend">GitHub</a>.</p>
+  </main>
+</body>
+</html>

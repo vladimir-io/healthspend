@@ -3,8 +3,8 @@
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: same-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://static.cloudflareinsights.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://*; img-src 'self' data: https://*;
-  Access-Control-Allow-Origin: *
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' blob: https://static.cloudflareinsights.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://huggingface.co https://*.huggingface.co https://cdn-lfs.huggingface.co https://cdn-lfs-us-1.huggingface.co https://static.cloudflareinsights.com; img-src 'self' data: https://huggingface.co https://*.huggingface.co; frame-ancestors 'none'
 
 /robots.txt
   Content-Type: text/plain; charset=utf-8
@@ -27,10 +27,12 @@
   Access-Control-Allow-Origin: *
   Cache-Control: public, max-age=3600
 
-# Essential for sql.js-httpvfs range requests
+# Essential for sql.js-httpvfs range requests (local preview / accidental origin copies)
 /*.db
   Accept-Ranges: bytes
   Access-Control-Expose-Headers: Content-Range, Content-Length
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Headers: Range
   Cache-Control: public, max-age=3600, no-transform
 
 /*.wasm

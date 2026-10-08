@@ -56,7 +56,7 @@ healthspend/
 
 ### Prerequisites
 
-- Node.js 18+
+- Node.js 22+ (matches CI)
 - Rust (stable)
 - Python 3.11+
 - SQLite CLI (optional, for inspection)

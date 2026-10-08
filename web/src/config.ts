@@ -21,11 +21,7 @@ export const DB_URL = import.meta.env.DEV
 /** Never auto-download the full ledger after a hot open failure. */
 export const DB_URL_CHAIN: string[] = [DB_URL];
 
-export const HOT_CPT_CODES = new Set([
-  '27447', '27130', '70551', '73721', '74177', '70450', '71045', '71250',
-  '80053', '85025', '45378', '45380', '99283', '99285', '59400', '12001',
-  '90686', '96372', '99213', '76700',
-]);
+export { HOT_CPT_CODES } from './hot_cpts';
 
 export const NPI_CONFIDENCE_THRESHOLD = 0.95;
 export const DB_VFS_ADAPTER: string = 'sqljs-httpvfs';

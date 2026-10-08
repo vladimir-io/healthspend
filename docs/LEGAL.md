@@ -19,6 +19,13 @@ Healthspend is provided for **transparency research and patient education**. It 
 - **Use this rate** emails are for estimates and billing questions.
 - **CMS complaints** (Incident Log / Full Audit) are for transparency filing issues — a separate path.
 
+## Privacy
+
+No accounts. Optional anonymous product telemetry may record page path (without
+query/hash), event type, and coarse campaign/referrer hostname tags for
+reliability. Procedure codes and search text are not intentionally collected in
+telemetry. See the live [Privacy](https://healthspend.lol/docs/privacy.html) page.
+
 ## Liability
 
 Users are responsible for how they use generated letters and data. See [LICENSE](../LICENSE) (MIT).
