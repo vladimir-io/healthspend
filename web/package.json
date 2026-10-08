@@ -9,19 +9,17 @@
     "preview": "vite preview",
     "search:check": "node scripts/search_regression_check.mjs && npm run search:quality",
     "search:quality": "npx tsx scripts/search_quality_suite.ts",
-    "test:turbolite": "node scripts/turbolite_integration_test.mjs",
     "test:perf": "playwright test",
     "test:perf:ui": "playwright test --ui"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0",
+    "@playwright/test": "^1.64.0",
     "sqlite3": "^6.0.1",
     "tsx": "^4.19.2",
     "typescript": "^5.2.2",
-    "vite": "^4.5.14"
+    "vite": "^6.4.4"
   },
   "dependencies": {
-    "sql.js-httpvfs": "^0.8.12",
-    "turbolite": "0.2.19"
+    "sql.js-httpvfs": "^0.8.12"
   }
 }

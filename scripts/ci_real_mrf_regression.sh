@@ -6,9 +6,11 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT/scraper"
 
 echo "==> Rust parser unit tests"
+# Serialize tests: scraper + ingest_mrf both compile these modules and used to
+# race on shared fixed paths under scraper/target/.
 for module in parser_json parser_csv fact_writer; do
   echo "--- cargo test --release $module"
-  cargo test --release "$module" 2>&1 | tail -20
+  cargo test --release "$module" -- --test-threads=1 2>&1 | tail -30
 done
 
 FIXTURES=(

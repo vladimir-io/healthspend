@@ -1,14 +1,13 @@
 use crate::schema::init_db;
-use reqwest::{Client, StatusCode, Proxy};
+use reqwest::{Client, Proxy, StatusCode};
 use std::time::Duration;
 use tokio::time::sleep;
 // use std::sync::{Arc, Mutex};
+use futures::stream::{FuturesUnordered, StreamExt};
 use tracing::{info, warn};
-use futures::stream::{StreamExt, FuturesUnordered};
 
 /// Browser-spoofing User-Agent. Identical to Chrome 124 on macOS.
-const USER_AGENT: &str =
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
+const USER_AGENT: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) \
      AppleWebKit/537.36 (KHTML, like Gecko) \
      Chrome/124.0.0.0 Safari/537.36";
 
@@ -18,7 +17,10 @@ pub struct AuditInput {
 
 /// Fetch a URL with exponential backoff on 429/503.
 /// Returns (status_code, body_text, waf_blocked).
-async fn fetch_with_backoff(client: &Client, url: &str) -> (Option<StatusCode>, Option<String>, bool) {
+async fn fetch_with_backoff(
+    client: &Client,
+    url: &str,
+) -> (Option<StatusCode>, Option<String>, bool) {
     let delays = [0, 2, 4, 8]; // seconds between retries
 
     for (attempt, delay_secs) in delays.iter().enumerate() {
@@ -26,9 +28,13 @@ async fn fetch_with_backoff(client: &Client, url: &str) -> (Option<StatusCode>, 
             sleep(Duration::from_secs(*delay_secs)).await;
         }
 
-        let resp = match client.get(url)
+        let resp = match client
+            .get(url)
             .header("User-Agent", USER_AGENT)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header(
+                "Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            )
             .header("Accept-Language", "en-US,en;q=0.5")
             .header("Connection", "keep-alive")
             .send()
@@ -62,9 +68,15 @@ async fn fetch_with_backoff(client: &Client, url: &str) -> (Option<StatusCode>, 
                         match proxy_client.get(url).send().await {
                             Ok(pr) if pr.status().is_success() => {
                                 info!("Proxy bypassed WAF block for {}!", url);
-                                return (Some(pr.status()), Some(pr.text().await.unwrap_or_default()), false);
+                                return (
+                                    Some(pr.status()),
+                                    Some(pr.text().await.unwrap_or_default()),
+                                    false,
+                                );
                             }
-                            _ => { warn!("Proxy fallback failed to bypass WAF for {}", url); }
+                            _ => {
+                                warn!("Proxy fallback failed to bypass WAF for {}", url);
+                            }
                         }
                     }
                 }
@@ -89,14 +101,66 @@ async fn fetch_with_backoff(client: &Client, url: &str) -> (Option<StatusCode>, 
 
 /// Validate state code format (2-letter US states + territories + military codes)
 fn is_valid_state_code(code: &str) -> bool {
-    matches!(code.to_uppercase().as_str(),
-        "AL" | "AK" | "AZ" | "AR" | "CA" | "CO" | "CT" | "DE" |
-        "FL" | "GA" | "HI" | "ID" | "IL" | "IN" | "IA" | "KS" |
-        "KY" | "LA" | "ME" | "MD" | "MA" | "MI" | "MN" | "MS" |
-        "MO" | "MT" | "NE" | "NV" | "NH" | "NJ" | "NM" | "NY" |
-        "NC" | "ND" | "OH" | "OK" | "OR" | "PA" | "RI" | "SC" |
-        "SD" | "TN" | "TX" | "UT" | "VT" | "VA" | "WA" | "WV" |
-        "WI" | "WY" | "DC" | "AS" | "GU" | "MP" | "PR" | "VI" | "AA" | "AE" | "AP"
+    matches!(
+        code.to_uppercase().as_str(),
+        "AL" | "AK"
+            | "AZ"
+            | "AR"
+            | "CA"
+            | "CO"
+            | "CT"
+            | "DE"
+            | "FL"
+            | "GA"
+            | "HI"
+            | "ID"
+            | "IL"
+            | "IN"
+            | "IA"
+            | "KS"
+            | "KY"
+            | "LA"
+            | "ME"
+            | "MD"
+            | "MA"
+            | "MI"
+            | "MN"
+            | "MS"
+            | "MO"
+            | "MT"
+            | "NE"
+            | "NV"
+            | "NH"
+            | "NJ"
+            | "NM"
+            | "NY"
+            | "NC"
+            | "ND"
+            | "OH"
+            | "OK"
+            | "OR"
+            | "PA"
+            | "RI"
+            | "SC"
+            | "SD"
+            | "TN"
+            | "TX"
+            | "UT"
+            | "VT"
+            | "VA"
+            | "WA"
+            | "WV"
+            | "WI"
+            | "WY"
+            | "DC"
+            | "AS"
+            | "GU"
+            | "MP"
+            | "PR"
+            | "VI"
+            | "AA"
+            | "AE"
+            | "AP"
     )
 }
 
@@ -112,7 +176,10 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
     // Validate state code if provided
     if let Some(ref state) = state_filter {
         if !is_valid_state_code(state) {
-            anyhow::bail!("Invalid state code: {}. Must be a valid 2-letter US state or territory code.", state);
+            anyhow::bail!(
+                "Invalid state code: {}. Must be a valid 2-letter US state or territory code.",
+                state
+            );
         }
     }
 
@@ -147,7 +214,10 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
         }
     }
 
-    info!("Auditing {} hospital nodes concurrently...", hospitals_to_audit.len());
+    info!(
+        "Auditing {} hospital nodes concurrently...",
+        hospitals_to_audit.len()
+    );
 
     let mut stream = FuturesUnordered::new();
     let semaphore = std::sync::Arc::new(tokio::sync::Semaphore::new(32)); // Concurrency throttle
@@ -155,7 +225,7 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
     for (ccn, website, txt_url) in hospitals_to_audit {
         let client_clone = client.clone();
         let sem = semaphore.clone();
-        
+
         stream.push(async move {
             let _permit = sem.acquire().await.unwrap();
             audit_hospital(&client_clone, ccn, website, txt_url).await
@@ -173,7 +243,12 @@ pub async fn run_auditor(state_filter: Option<String>) -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn audit_hospital(client: &Client, ccn: String, website: String, txt_url: String) -> anyhow::Result<()> {
+async fn audit_hospital(
+    client: &Client,
+    ccn: String,
+    website: String,
+    txt_url: String,
+) -> anyhow::Result<()> {
     if txt_url.is_empty() {
         return Ok(());
     }
@@ -191,9 +266,19 @@ async fn audit_hospital(client: &Client, ccn: String, website: String, txt_url: 
         evidence.push_str("✓ cms-hpt.txt found. ");
     } else if waf_blocked {
         score -= 30;
-        evidence.push_str(&format!("❌ WAF blocked cms-hpt.txt check ({}). ", hpt_status.map(|s| s.as_u16().to_string()).unwrap_or("no response".into())));
+        evidence.push_str(&format!(
+            "❌ WAF blocked cms-hpt.txt check ({}). ",
+            hpt_status
+                .map(|s| s.as_u16().to_string())
+                .unwrap_or("no response".into())
+        ));
     } else {
-        evidence.push_str(&format!("❌ cms-hpt.txt unreachable ({}). ", hpt_status.map(|s| s.as_u16().to_string()).unwrap_or("connection failed".into())));
+        evidence.push_str(&format!(
+            "❌ cms-hpt.txt unreachable ({}). ",
+            hpt_status
+                .map(|s| s.as_u16().to_string())
+                .unwrap_or("connection failed".into())
+        ));
     }
 
     // --- Check 2: robots.txt ---
@@ -208,23 +293,28 @@ async fn audit_hospital(client: &Client, ccn: String, website: String, txt_url: 
                     score += 10;
                 }
             }
-            None => {} 
+            None => {}
         };
     }
 
     // In a high-concurrency production system, we'd use a pool of connections (e.g., r2d2)
     // For this single-file audit, we'll re-open to persist results efficiently.
-    let conn = init_db()?; 
+    let conn = init_db()?;
     conn.execute(
         "INSERT OR REPLACE INTO compliance
             (ccn, score, txt_exists, robots_ok, mrf_reachable, mrf_valid, mrf_fresh,
                 shoppable_exists, mrf_machine_readable, waf_blocked, last_checked, evidence_json)
             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, datetime('now'), ?11)",
         rusqlite::params![
-            ccn, score, txt_exists, true,
-            txt_exists, 
-            false, false, false,
-            1,        
+            ccn,
+            score,
+            txt_exists,
+            true,
+            txt_exists,
+            false,
+            false,
+            false,
+            1,
             waf_blocked,
             evidence
         ],
@@ -245,7 +335,8 @@ pub fn update_parse_result(
     let evidence_suffix = if mrf_machine_readable {
         format!("✓ MRF parsed: {} shoppable records found. ", records_found)
     } else {
-        "❌ MRF is machine-unreadable (malformed schema, encoding error, or unsupported format). ".to_string()
+        "❌ MRF is machine-unreadable (malformed schema, encoding error, or unsupported format). "
+            .to_string()
     };
 
     conn.execute(

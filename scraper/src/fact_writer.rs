@@ -42,8 +42,11 @@ impl FactWriter {
 
     pub fn write_dual(&self, conn: &mut Connection, input: &PriceFactInput<'_>) {
         let provider_id = self.upsert_provider(conn, input.provider_npi);
-        let confidence = self.compute_confidence(conn, input.ccn, input.provider_npi, input.payer, input.plan);
-        let hospital_name = self.query_hospital_name(conn, input.ccn).unwrap_or_default();
+        let confidence =
+            self.compute_confidence(conn, input.ccn, input.provider_npi, input.payer, input.plan);
+        let hospital_name = self
+            .query_hospital_name(conn, input.ccn)
+            .unwrap_or_default();
         let evidence = input
             .provider_npi
             .and_then(|n| self.query_provider_evidence(conn, n.trim()));
@@ -58,7 +61,8 @@ impl FactWriter {
             .as_ref()
             .and_then(|e| e.accessibility.clone())
             .unwrap_or_default();
-        let license_proxy_suspected = self.detect_license_proxy(conn, input.ccn, input.provider_npi, evidence.as_ref());
+        let license_proxy_suspected =
+            self.detect_license_proxy(conn, input.ccn, input.provider_npi, evidence.as_ref());
 
         // Legacy wide table (compat path)
         let _ = conn.execute(
@@ -93,7 +97,8 @@ impl FactWriter {
         );
 
         let hospital_id = self.upsert_hospital(conn, input.ccn);
-        let procedure_id = self.upsert_procedure(conn, input.code_type, input.code, input.description);
+        let procedure_id =
+            self.upsert_procedure(conn, input.code_type, input.code, input.description);
         let payer_id = self.upsert_payer(conn, input.payer);
         let plan_id = self.upsert_plan(conn, payer_id, input.plan);
         let source_row_hash = self.make_row_hash(input, confidence);
@@ -172,27 +177,31 @@ impl FactWriter {
             "INSERT OR IGNORE INTO dim_hospital (ccn, name, effective_date) VALUES (?1, ?2, datetime('now'))",
             params![ccn, placeholder],
         );
-        conn
-            .query_row(
-                "SELECT hospital_id FROM dim_hospital WHERE ccn = ?1",
-                params![ccn],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
+        conn.query_row(
+            "SELECT hospital_id FROM dim_hospital WHERE ccn = ?1",
+            params![ccn],
+            |row| row.get(0),
+        )
+        .unwrap_or(0)
     }
 
-    fn upsert_procedure(&self, conn: &mut Connection, code_type: &str, code: &str, description: &str) -> i64 {
+    fn upsert_procedure(
+        &self,
+        conn: &mut Connection,
+        code_type: &str,
+        code: &str,
+        description: &str,
+    ) -> i64 {
         let _ = conn.execute(
             "INSERT OR IGNORE INTO dim_procedure (code_type, code, description) VALUES (?1, ?2, ?3)",
             params![code_type, code, description],
         );
-        conn
-            .query_row(
-                "SELECT procedure_id FROM dim_procedure WHERE code_type = ?1 AND code = ?2",
-                params![code_type, code],
-                |row| row.get(0),
-            )
-            .unwrap_or(0)
+        conn.query_row(
+            "SELECT procedure_id FROM dim_procedure WHERE code_type = ?1 AND code = ?2",
+            params![code_type, code],
+            |row| row.get(0),
+        )
+        .unwrap_or(0)
     }
 
     fn upsert_payer(&self, conn: &mut Connection, payer: &str) -> Option<i64> {
@@ -204,13 +213,12 @@ impl FactWriter {
             "INSERT OR IGNORE INTO dim_payer (payer_name, normalized_name) VALUES (?1, ?2)",
             params![payer.trim(), normalized],
         );
-        conn
-            .query_row(
-                "SELECT payer_id FROM dim_payer WHERE normalized_name = ?1",
-                params![normalized],
-                |row| row.get(0),
-            )
-            .ok()
+        conn.query_row(
+            "SELECT payer_id FROM dim_payer WHERE normalized_name = ?1",
+            params![normalized],
+            |row| row.get(0),
+        )
+        .ok()
     }
 
     fn upsert_plan(&self, conn: &mut Connection, payer_id: Option<i64>, plan: &str) -> Option<i64> {
@@ -223,13 +231,12 @@ impl FactWriter {
             "INSERT OR IGNORE INTO dim_plan (payer_id, plan_name, normalized_name) VALUES (?1, ?2, ?3)",
             params![pid, plan.trim(), normalized],
         );
-        conn
-            .query_row(
-                "SELECT plan_id FROM dim_plan WHERE payer_id = ?1 AND normalized_name = ?2",
-                params![pid, normalized],
-                |row| row.get(0),
-            )
-            .ok()
+        conn.query_row(
+            "SELECT plan_id FROM dim_plan WHERE payer_id = ?1 AND normalized_name = ?2",
+            params![pid, normalized],
+            |row| row.get(0),
+        )
+        .ok()
     }
 
     fn upsert_provider(&self, conn: &mut Connection, provider_npi: Option<&str>) -> Option<i64> {
@@ -260,13 +267,12 @@ impl FactWriter {
             params![npi],
         );
 
-        conn
-            .query_row(
-                "SELECT provider_id FROM dim_provider_npi WHERE npi = ?1",
-                params![npi],
-                |row| row.get(0),
-            )
-            .ok()
+        conn.query_row(
+            "SELECT provider_id FROM dim_provider_npi WHERE npi = ?1",
+            params![npi],
+            |row| row.get(0),
+        )
+        .ok()
     }
 
     fn compute_confidence(
@@ -294,7 +300,12 @@ impl FactWriter {
                         .unwrap_or(false);
 
                     let hospital_state = self.query_hospital_state(conn, ccn);
-                    address_proximity_match = self.matches_hospital_state(conn, clean, hospital_state.as_deref(), evidence.practice_state.as_deref());
+                    address_proximity_match = self.matches_hospital_state(
+                        conn,
+                        clean,
+                        hospital_state.as_deref(),
+                        evidence.practice_state.as_deref(),
+                    );
 
                     if evidence
                         .accessibility
@@ -351,20 +362,16 @@ impl FactWriter {
                             clean,
                             label,
                             code,
-                            evidence.deactivation_date.as_deref().unwrap_or("unknown date")
+                            evidence
+                                .deactivation_date
+                                .as_deref()
+                                .unwrap_or("unknown date")
                         );
                         let _ = conn.execute(
                             "INSERT OR REPLACE INTO npi_audit_findings (
                                 snapshot_date, ccn, npi, finding_type, severity, reason_code, notes
                             ) VALUES (?1, ?2, ?3, 'zombie_npi', ?4, ?5, ?6)",
-                            params![
-                                &self.snapshot_date,
-                                ccn,
-                                clean,
-                                severity,
-                                code,
-                                notes,
-                            ],
+                            params![&self.snapshot_date, ccn, clean, severity, code, notes,],
                         );
                     }
                 }
@@ -381,10 +388,13 @@ impl FactWriter {
         (score(&signals) - confidence_penalty).clamp(0.0, 1.0)
     }
 
-    fn query_provider_evidence(&self, conn: &mut Connection, npi: &str) -> Option<ProviderEvidence> {
-        conn
-            .query_row(
-                "SELECT
+    fn query_provider_evidence(
+        &self,
+        conn: &mut Connection,
+        npi: &str,
+    ) -> Option<ProviderEvidence> {
+        conn.query_row(
+            "SELECT
                     org_name,
                     entity_type,
                     primary_taxonomy,
@@ -396,32 +406,31 @@ impl FactWriter {
                     direct_email
                  FROM dim_provider_npi
                  WHERE npi = ?1",
-                params![npi],
-                |row| {
-                    Ok(ProviderEvidence {
-                        org_name: row.get(0)?,
-                        entity_type: row.get(1)?,
-                        primary_taxonomy: row.get(2)?,
-                        practice_state: row.get(3)?,
-                        deactivation_reason_code: row.get(4)?,
-                        deactivation_date: row.get(5)?,
-                        accessibility: row.get(6)?,
-                        secondary_languages: row.get(7)?,
-                        direct_email: row.get(8)?,
-                    })
-                },
-            )
-            .ok()
+            params![npi],
+            |row| {
+                Ok(ProviderEvidence {
+                    org_name: row.get(0)?,
+                    entity_type: row.get(1)?,
+                    primary_taxonomy: row.get(2)?,
+                    practice_state: row.get(3)?,
+                    deactivation_reason_code: row.get(4)?,
+                    deactivation_date: row.get(5)?,
+                    accessibility: row.get(6)?,
+                    secondary_languages: row.get(7)?,
+                    direct_email: row.get(8)?,
+                })
+            },
+        )
+        .ok()
     }
 
     fn query_hospital_name(&self, conn: &mut Connection, ccn: &str) -> Option<String> {
-        conn
-            .query_row(
-                "SELECT name FROM dim_hospital WHERE ccn = ?1",
-                params![ccn],
-                |row| row.get(0),
-            )
-            .ok()
+        conn.query_row(
+            "SELECT name FROM dim_hospital WHERE ccn = ?1",
+            params![ccn],
+            |row| row.get(0),
+        )
+        .ok()
     }
 
     fn detect_license_proxy(
@@ -431,9 +440,7 @@ impl FactWriter {
         provider_npi: Option<&str>,
         evidence: Option<&ProviderEvidence>,
     ) -> bool {
-        let hospital = self
-            .query_hospital_name(conn, ccn)
-            .unwrap_or_default();
+        let hospital = self.query_hospital_name(conn, ccn).unwrap_or_default();
         let provider_org = evidence
             .and_then(|e| e.org_name.clone())
             .unwrap_or_default();
@@ -451,7 +458,8 @@ impl FactWriter {
             _ => return true,
         };
 
-        let mut stmt = match conn.prepare("SELECT other_name FROM nppes_other_names WHERE npi = ?1") {
+        let mut stmt = match conn.prepare("SELECT other_name FROM nppes_other_names WHERE npi = ?1")
+        {
             Ok(s) => s,
             Err(_) => return true,
         };
@@ -486,13 +494,12 @@ impl FactWriter {
     }
 
     fn query_hospital_state(&self, conn: &mut Connection, ccn: &str) -> Option<String> {
-        conn
-            .query_row(
-                "SELECT state FROM dim_hospital WHERE ccn = ?1",
-                params![ccn],
-                |row| row.get(0),
-            )
-            .ok()
+        conn.query_row(
+            "SELECT state FROM dim_hospital WHERE ccn = ?1",
+            params![ccn],
+            |row| row.get(0),
+        )
+        .ok()
     }
 
     fn matches_hospital_state(
@@ -514,10 +521,11 @@ impl FactWriter {
             return true;
         }
 
-        let mut stmt = match conn.prepare("SELECT state FROM nppes_practice_locations WHERE npi = ?1") {
-            Ok(s) => s,
-            Err(_) => return false,
-        };
+        let mut stmt =
+            match conn.prepare("SELECT state FROM nppes_practice_locations WHERE npi = ?1") {
+                Ok(s) => s,
+                Err(_) => return false,
+            };
 
         let rows = match stmt.query_map(params![npi], |row| row.get::<_, Option<String>>(0)) {
             Ok(r) => r,
@@ -618,7 +626,8 @@ mod tests {
             "INSERT INTO nppes_deactivations (npi, deactivation_date, reason_code, reason_text)
              VALUES ('1234567890', '2026-02-15', '4', 'Misused/Identity Theft')",
             [],
-        ).unwrap();
+        )
+        .unwrap();
 
         let writer = FactWriter::new("2026-04-09".to_string());
         writer.write_dual(
@@ -640,11 +649,13 @@ mod tests {
             },
         );
 
-        let confidence: f64 = conn.query_row(
-            "SELECT attribution_confidence FROM prices WHERE ccn='450056' AND cpt_code='70450'",
-            [],
-            |r| r.get(0),
-        ).unwrap();
+        let confidence: f64 = conn
+            .query_row(
+                "SELECT attribution_confidence FROM prices WHERE ccn='450056' AND cpt_code='70450'",
+                [],
+                |r| r.get(0),
+            )
+            .unwrap();
         assert!(confidence < 0.9);
 
         let zombie_count: i64 = conn.query_row(

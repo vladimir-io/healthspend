@@ -7,11 +7,7 @@ export default defineConfig({
     emptyOutDir: true,
     rollupOptions: {
       input: { main: './index.html' },
-      external: ['turbolite'],
     },
-  },
-  optimizeDeps: {
-    exclude: ['turbolite'],
   },
   server: {
     port: 5173,

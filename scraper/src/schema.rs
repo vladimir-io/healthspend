@@ -36,8 +36,14 @@ pub fn init_db() -> Result<Connection> {
     )?;
 
     // Safe migration: add columns to existing DBs that predate this schema version
-    let _ = conn.execute("ALTER TABLE compliance ADD COLUMN mrf_machine_readable INTEGER NOT NULL DEFAULT 1", []);
-    let _ = conn.execute("ALTER TABLE compliance ADD COLUMN waf_blocked INTEGER NOT NULL DEFAULT 0", []);
+    let _ = conn.execute(
+        "ALTER TABLE compliance ADD COLUMN mrf_machine_readable INTEGER NOT NULL DEFAULT 1",
+        [],
+    );
+    let _ = conn.execute(
+        "ALTER TABLE compliance ADD COLUMN waf_blocked INTEGER NOT NULL DEFAULT 0",
+        [],
+    );
 
     // We'll put prices in a separate DB file but we can define the schema here
     let prices_conn = Connection::open("prices.db")?;
@@ -61,7 +67,10 @@ pub fn init_db() -> Result<Connection> {
     )?;
 
     let _ = prices_conn.execute("ALTER TABLE prices ADD COLUMN provider_npi TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE prices ADD COLUMN attribution_confidence REAL", []);
+    let _ = prices_conn.execute(
+        "ALTER TABLE prices ADD COLUMN attribution_confidence REAL",
+        [],
+    );
 
     prices_conn.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_prices_upsert_key
@@ -122,11 +131,26 @@ pub fn init_db() -> Result<Connection> {
         [],
     )?;
 
-    let _ = prices_conn.execute("ALTER TABLE dim_provider_npi ADD COLUMN deactivation_date TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE dim_provider_npi ADD COLUMN deactivation_reason_code TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE dim_provider_npi ADD COLUMN accessibility TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE dim_provider_npi ADD COLUMN secondary_languages TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE dim_provider_npi ADD COLUMN direct_email TEXT", []);
+    let _ = prices_conn.execute(
+        "ALTER TABLE dim_provider_npi ADD COLUMN deactivation_date TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE dim_provider_npi ADD COLUMN deactivation_reason_code TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE dim_provider_npi ADD COLUMN accessibility TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE dim_provider_npi ADD COLUMN secondary_languages TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE dim_provider_npi ADD COLUMN direct_email TEXT",
+        [],
+    );
 
     prices_conn.execute(
         "CREATE TABLE IF NOT EXISTS nppes_provider_core (
@@ -317,11 +341,26 @@ pub fn init_db() -> Result<Connection> {
         [],
     )?;
 
-    let _ = prices_conn.execute("ALTER TABLE hot_price_compare ADD COLUMN hospital_name TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE hot_price_compare ADD COLUMN zombie_status TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE hot_price_compare ADD COLUMN zombie_reason_code TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE hot_price_compare ADD COLUMN accessibility TEXT", []);
-    let _ = prices_conn.execute("ALTER TABLE hot_price_compare ADD COLUMN license_proxy_suspected INTEGER DEFAULT 0", []);
+    let _ = prices_conn.execute(
+        "ALTER TABLE hot_price_compare ADD COLUMN hospital_name TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE hot_price_compare ADD COLUMN zombie_status TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE hot_price_compare ADD COLUMN zombie_reason_code TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE hot_price_compare ADD COLUMN accessibility TEXT",
+        [],
+    );
+    let _ = prices_conn.execute(
+        "ALTER TABLE hot_price_compare ADD COLUMN license_proxy_suspected INTEGER DEFAULT 0",
+        [],
+    );
 
     // Parse errors audit table for tracking data quality issues
     conn.execute(

@@ -30,7 +30,7 @@ Row counts depend on how many hospitals successfully publish parseable MRFs. Wit
 | Component | Contents |
 |-----------|----------|
 | `hospitals`, `compliance` | Full copy from `audit_data.db` |
-| `prices` | Only rows where `cpt_code` is in the hot CPT list (16 codes; see `scripts/build_hot_db.py`) |
+| `prices` | Only rows where `cpt_code` is in the hot CPT list (20 codes; see `scripts/build_hot_db.py`) |
 | FTS / `hot_price_compare` | Subset when present in source |
 
 **Built by:** `python3 scripts/build_hot_db.py --source web/public/audit_data.db --out web/public/audit_hot.db`

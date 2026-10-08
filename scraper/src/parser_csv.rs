@@ -1,6 +1,6 @@
-use crate::shoppable::should_store_code;
-use crate::fact_writer::{FactWriter, PriceFactInput};
 use crate::error_logger::{log_parse_error_to_database, ParseError};
+use crate::fact_writer::{FactWriter, PriceFactInput};
+use crate::shoppable::should_store_code;
 use rusqlite::Connection;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
@@ -14,10 +14,7 @@ pub struct ParseResult {
 /// Sanitize a raw price string from a hospital CSV into a clean f64.
 /// Handles: "$1,200.00", "N/A", "See Contract", "-", "", blanks.
 fn parse_charge(raw: &str) -> f64 {
-    let cleaned = raw
-        .trim()
-        .trim_start_matches('$')
-        .replace(',', "");
+    let cleaned = raw.trim().trim_start_matches('$').replace(',', "");
 
     match cleaned.to_ascii_lowercase().as_str() {
         "" | "n/a" | "na" | "see contract" | "-" | "not available" | "none" | "varies" => 0.0,
@@ -32,7 +29,9 @@ fn find_header_row(path: &str) -> Option<usize> {
     let file = File::open(path).ok()?;
     let reader = BufReader::new(file);
     for (i, line) in reader.lines().enumerate() {
-        if i > 30 { break; } // Don't scan forever
+        if i > 30 {
+            break;
+        } // Don't scan forever
         if let Ok(l) = line {
             let lower = l.to_ascii_lowercase();
             if lower.contains("code|1") || lower.contains("description") {
@@ -46,17 +45,39 @@ fn find_header_row(path: &str) -> Option<usize> {
 /// Fuzzy header matching — handles hospitals remapping standard CMS column names.
 fn match_header(h: &str) -> Option<&'static str> {
     let lower = h.to_ascii_lowercase();
-    if lower.contains("code|1") || lower == "cpt_code" || lower == "cpt" { return Some("code"); }
-    if lower == "description" || lower == "item_description" || lower == "service_description" { return Some("desc"); }
-    if lower.contains("gross") { return Some("gross"); }
-    if lower.contains("discounted_cash") || lower == "cash_price" || lower == "cash" { return Some("cash"); }
-    if lower.contains("negotiated_dollar") || lower.contains("negotiated") { return Some("negotiated"); }
-    if lower.contains("allowed_amount_median") || lower.contains("allowed_median") { return Some("allowed_median"); }
-    if lower.contains("allowed_amount_10th") || lower.contains("allowed_p10") { return Some("allowed_p10"); }
-    if lower.contains("allowed_amount_90th") || lower.contains("allowed_p90") { return Some("allowed_p90"); }
-    if lower == "payer_name" || lower == "payer" || lower == "insurance" { return Some("payer"); }
-    if lower == "plan_name" || lower == "plan" || lower == "plan_type" { return Some("plan"); }
-    if lower == "provider_npi" || lower == "npi" || lower.contains("npi") { return Some("provider_npi"); }
+    if lower.contains("code|1") || lower == "cpt_code" || lower == "cpt" {
+        return Some("code");
+    }
+    if lower == "description" || lower == "item_description" || lower == "service_description" {
+        return Some("desc");
+    }
+    if lower.contains("gross") {
+        return Some("gross");
+    }
+    if lower.contains("discounted_cash") || lower == "cash_price" || lower == "cash" {
+        return Some("cash");
+    }
+    if lower.contains("negotiated_dollar") || lower.contains("negotiated") {
+        return Some("negotiated");
+    }
+    if lower.contains("allowed_amount_median") || lower.contains("allowed_median") {
+        return Some("allowed_median");
+    }
+    if lower.contains("allowed_amount_10th") || lower.contains("allowed_p10") {
+        return Some("allowed_p10");
+    }
+    if lower.contains("allowed_amount_90th") || lower.contains("allowed_p90") {
+        return Some("allowed_p90");
+    }
+    if lower == "payer_name" || lower == "payer" || lower == "insurance" {
+        return Some("payer");
+    }
+    if lower == "plan_name" || lower == "plan" || lower == "plan_type" {
+        return Some("plan");
+    }
+    if lower == "provider_npi" || lower == "npi" || lower.contains("npi") {
+        return Some("provider_npi");
+    }
     None
 }
 
@@ -75,14 +96,20 @@ pub fn parse_csv_tall_with_dbs(
     // Step 1: Find where real data starts (skip garbage header rows)
     let header_row = find_header_row(file_path).unwrap_or(0);
     if header_row > 0 {
-        warn!("Skipping {} preamble rows before data headers in {}", header_row, file_path);
+        warn!(
+            "Skipping {} preamble rows before data headers in {}",
+            header_row, file_path
+        );
     }
 
     let mut conn = match Connection::open(prices_db_path) {
         Ok(c) => c,
         Err(e) => {
             warn!("Failed to open prices.db: {}", e);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -91,7 +118,10 @@ pub fn parse_csv_tall_with_dbs(
         Ok(c) => c,
         Err(e) => {
             warn!("Failed to open compliance.db for error logging: {}", e);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -107,7 +137,10 @@ pub fn parse_csv_tall_with_dbs(
                 0,
             );
             let _ = log_parse_error_to_database(error, &compliance_conn);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -121,9 +154,7 @@ pub fn parse_csv_tall_with_dbs(
         let _ = reader.read_line(&mut discard);
     }
 
-    let mut rdr = csv::ReaderBuilder::new()
-        .flexible(true)
-        .from_reader(reader);
+    let mut rdr = csv::ReaderBuilder::new().flexible(true).from_reader(reader);
 
     let headers = match rdr.headers() {
         Ok(h) => h.clone(),
@@ -137,7 +168,10 @@ pub fn parse_csv_tall_with_dbs(
                 file_size,
             );
             let _ = log_parse_error_to_database(error, &compliance_conn);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -172,13 +206,22 @@ pub fn parse_csv_tall_with_dbs(
     }
 
     if idx_code.is_none() || idx_desc.is_none() {
-        warn!("Missing essential headers (code/description) in {} -- marking as machine-unreadable.", file_path);
-        return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+        warn!(
+            "Missing essential headers (code/description) in {} -- marking as machine-unreadable.",
+            file_path
+        );
+        return ParseResult {
+            records_inserted: 0,
+            mrf_machine_readable: false,
+        };
     }
 
     if conn.execute_batch("BEGIN IMMEDIATE TRANSACTION;").is_err() {
         warn!("DB transaction failed");
-        return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+        return ParseResult {
+            records_inserted: 0,
+            mrf_machine_readable: false,
+        };
     }
 
     let snapshot_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
@@ -193,7 +236,11 @@ pub fn parse_csv_tall_with_dbs(
             Err(_) => continue, // Skip malformed rows
         };
 
-        let code = idx_code.and_then(|i| record.get(i)).unwrap_or("").trim().to_string();
+        let code = idx_code
+            .and_then(|i| record.get(i))
+            .unwrap_or("")
+            .trim()
+            .to_string();
 
         // Step 3: CPT coverage policy (shoppable-only by default, full via env toggle)
         if !should_store_code(&code) {
@@ -201,51 +248,108 @@ pub fn parse_csv_tall_with_dbs(
             continue;
         }
 
-        let desc = idx_desc.and_then(|i| record.get(i)).unwrap_or("").to_string();
-        let gross  = idx_gross.and_then(|i| record.get(i)).map(parse_charge).unwrap_or(0.0);
-        let cash   = idx_cash.and_then(|i| record.get(i)).map(parse_charge).unwrap_or(0.0);
-        let neg    = idx_negotiated.and_then(|i| record.get(i)).map(parse_charge).unwrap_or(0.0);
-        let allowed_median = idx_allowed_median.and_then(|i| record.get(i)).map(parse_charge);
-        let allowed_p10 = idx_allowed_p10.and_then(|i| record.get(i)).map(parse_charge);
-        let allowed_p90 = idx_allowed_p90.and_then(|i| record.get(i)).map(parse_charge);
-        let payer  = idx_payer.and_then(|i| record.get(i)).unwrap_or("").to_string();
-        let plan   = idx_plan.and_then(|i| record.get(i)).unwrap_or("").to_string();
-        let provider_npi = idx_provider_npi.and_then(|i| record.get(i)).map(|s| s.trim().to_string());
+        let desc = idx_desc
+            .and_then(|i| record.get(i))
+            .unwrap_or("")
+            .to_string();
+        let gross = idx_gross
+            .and_then(|i| record.get(i))
+            .map(parse_charge)
+            .unwrap_or(0.0);
+        let cash = idx_cash
+            .and_then(|i| record.get(i))
+            .map(parse_charge)
+            .unwrap_or(0.0);
+        let neg = idx_negotiated
+            .and_then(|i| record.get(i))
+            .map(parse_charge)
+            .unwrap_or(0.0);
+        let allowed_median = idx_allowed_median
+            .and_then(|i| record.get(i))
+            .map(parse_charge);
+        let allowed_p10 = idx_allowed_p10
+            .and_then(|i| record.get(i))
+            .map(parse_charge);
+        let allowed_p90 = idx_allowed_p90
+            .and_then(|i| record.get(i))
+            .map(parse_charge);
+        let payer = idx_payer
+            .and_then(|i| record.get(i))
+            .unwrap_or("")
+            .to_string();
+        let plan = idx_plan
+            .and_then(|i| record.get(i))
+            .unwrap_or("")
+            .to_string();
+        let provider_npi = idx_provider_npi
+            .and_then(|i| record.get(i))
+            .map(|s| s.trim().to_string());
 
-        writer.write_dual(&mut conn, &PriceFactInput {
-            ccn,
-            code_type: "CPT",
-            code: &code,
-            description: &desc,
-            gross_charge: gross,
-            cash_price: cash,
-            negotiated_rate: neg,
-            payer: &payer,
-            plan: &plan,
-            provider_npi: provider_npi.as_deref(),
-            allowed_median,
-            allowed_p10,
-            allowed_p90,
-        });
+        writer.write_dual(
+            &mut conn,
+            &PriceFactInput {
+                ccn,
+                code_type: "CPT",
+                code: &code,
+                description: &desc,
+                gross_charge: gross,
+                cash_price: cash,
+                negotiated_rate: neg,
+                payer: &payer,
+                plan: &plan,
+                provider_npi: provider_npi.as_deref(),
+                allowed_median,
+                allowed_p10,
+                allowed_p90,
+            },
+        );
 
         ct += 1;
         if ct % 1000 == 0 {
             if let Err(e) = conn.execute_batch("COMMIT; BEGIN IMMEDIATE TRANSACTION;") {
                 warn!("Batch commit failed at row {}: {}", ct, e);
-                return ParseResult { records_inserted: ct, mrf_machine_readable: true };
+                return ParseResult {
+                    records_inserted: ct,
+                    mrf_machine_readable: true,
+                };
             }
         }
     }
 
     let _ = conn.execute_batch("COMMIT;");
-    info!("CSV parse complete: {} inserted, {} skipped (non-shoppable)", ct, skipped);
-    ParseResult { records_inserted: ct, mrf_machine_readable: ct > 0 || skipped > 0 }
+    info!(
+        "CSV parse complete: {} inserted, {} skipped (non-shoppable)",
+        ct, skipped
+    );
+    ParseResult {
+        records_inserted: ct,
+        mrf_machine_readable: ct > 0 || skipped > 0,
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use rusqlite::Connection;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+    fn unique_test_dbs(label: &str) -> (PathBuf, PathBuf, PathBuf) {
+        let n = TEMP_SEQ.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "healthspend-csv-{}-{}-{}",
+            label,
+            std::process::id(),
+            n
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let prices = dir.join("prices.db");
+        let compliance = dir.join("compliance.db");
+        (dir, prices, compliance)
+    }
 
     fn setup_test_dbs(prices_db: &str, compliance_db: &str) {
         let prices = Connection::open(prices_db).unwrap();
@@ -279,8 +383,9 @@ mod tests {
         ).unwrap();
 
         let compliance = Connection::open(compliance_db).unwrap();
-        compliance.execute_batch(
-            "CREATE TABLE IF NOT EXISTS parse_errors (
+        compliance
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS parse_errors (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ccn TEXT NOT NULL,
                 file_path TEXT NOT NULL,
@@ -291,21 +396,28 @@ mod tests {
                 resolved INTEGER DEFAULT 0,
                 resolution_note TEXT
             );",
-        ).unwrap();
+            )
+            .unwrap();
     }
 
     #[test]
     fn parses_contract_v3_csv_fixture() {
         let root = env!("CARGO_MANIFEST_DIR");
         let csv_path = format!("{}/data/contract_v3.csv", root);
-        let prices_db = format!("{}/target/test-contract-v3-csv-prices.db", root);
-        let compliance_db = format!("{}/target/test-contract-v3-csv-compliance.db", root);
-        let _ = std::fs::remove_file(&prices_db);
-        let _ = std::fs::remove_file(&compliance_db);
-        setup_test_dbs(&prices_db, &compliance_db);
+        let (dir, prices_db, compliance_db) = unique_test_dbs("contract-v3");
+        setup_test_dbs(prices_db.to_str().unwrap(), compliance_db.to_str().unwrap());
 
-        let result = parse_csv_tall_with_dbs(&csv_path, "450056", &prices_db, &compliance_db);
-        assert!(result.mrf_machine_readable);
+        let result = parse_csv_tall_with_dbs(
+            &csv_path,
+            "450056",
+            prices_db.to_str().unwrap(),
+            compliance_db.to_str().unwrap(),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            result.mrf_machine_readable,
+            "expected contract_v3.csv to be machine-readable"
+        );
         assert!(result.records_inserted >= 1);
     }
 
@@ -313,13 +425,16 @@ mod tests {
     fn rejects_malformed_csv_missing_required_headers() {
         let root = env!("CARGO_MANIFEST_DIR");
         let csv_path = format!("{}/data/contract_v3_malformed.csv", root);
-        let prices_db = format!("{}/target/test-malformed-csv-prices.db", root);
-        let compliance_db = format!("{}/target/test-malformed-csv-compliance.db", root);
-        let _ = std::fs::remove_file(&prices_db);
-        let _ = std::fs::remove_file(&compliance_db);
-        setup_test_dbs(&prices_db, &compliance_db);
+        let (dir, prices_db, compliance_db) = unique_test_dbs("malformed");
+        setup_test_dbs(prices_db.to_str().unwrap(), compliance_db.to_str().unwrap());
 
-        let result = parse_csv_tall_with_dbs(&csv_path, "450056", &prices_db, &compliance_db);
+        let result = parse_csv_tall_with_dbs(
+            &csv_path,
+            "450056",
+            prices_db.to_str().unwrap(),
+            compliance_db.to_str().unwrap(),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
         assert!(!result.mrf_machine_readable);
         assert_eq!(result.records_inserted, 0);
     }

@@ -2,7 +2,9 @@ use crate::schema::init_db;
 use csv::{ByteRecord, ReaderBuilder};
 use rayon::prelude::*;
 use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, CONNECTION, UPGRADE_INSECURE_REQUESTS};
+use reqwest::header::{
+    HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, CONNECTION, UPGRADE_INSECURE_REQUESTS,
+};
 use reqwest::Url;
 use rusqlite::{params, Connection};
 use std::collections::{HashMap, HashSet};
@@ -34,25 +36,25 @@ fn normalize_header(raw: &str) -> String {
 
 fn find_col(headers: &csv::StringRecord, candidates: &[&str]) -> Option<usize> {
     let wanted: HashSet<String> = candidates.iter().map(|c| normalize_header(c)).collect();
-    headers
-        .iter()
-        .enumerate()
-        .find_map(|(i, h)| if wanted.contains(&normalize_header(h)) { Some(i) } else { None })
+    headers.iter().enumerate().find_map(|(i, h)| {
+        if wanted.contains(&normalize_header(h)) {
+            Some(i)
+        } else {
+            None
+        }
+    })
 }
 
 fn find_col_bytes(headers: &ByteRecord, candidates: &[&str]) -> Option<usize> {
     let wanted: HashSet<String> = candidates.iter().map(|c| normalize_header(c)).collect();
-    headers
-        .iter()
-        .enumerate()
-        .find_map(|(i, h)| {
-            let field = String::from_utf8_lossy(h);
-            if wanted.contains(&normalize_header(&field)) {
-                Some(i)
-            } else {
-                None
-            }
-        })
+    headers.iter().enumerate().find_map(|(i, h)| {
+        let field = String::from_utf8_lossy(h);
+        if wanted.contains(&normalize_header(&field)) {
+            Some(i)
+        } else {
+            None
+        }
+    })
 }
 
 fn resolve_input_path(seed_file: &str) -> PathBuf {
@@ -83,7 +85,13 @@ fn normalize_ccn(raw: &str) -> String {
 
 fn normalize_name(raw: &str) -> String {
     raw.chars()
-        .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_lowercase() } else { ' ' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                ' '
+            }
+        })
         .collect::<String>()
         .split_whitespace()
         .collect::<Vec<_>>()
@@ -131,16 +139,25 @@ impl CcnNpiCrosswalkIndex {
     fn build(path: &str) -> anyhow::Result<Self> {
         let resolved = resolve_input_path(path);
         let file = File::open(&resolved)?;
-        let mut rdr = ReaderBuilder::new().flexible(true).from_reader(BufReader::new(file));
+        let mut rdr = ReaderBuilder::new()
+            .flexible(true)
+            .from_reader(BufReader::new(file));
         let headers = rdr.byte_headers()?.clone();
 
         let idx_ccn = find_col_bytes(
             &headers,
-            &["CCN", "Facility ID", "CAH OR HOSPITAL CCN", "Provider Number"],
+            &[
+                "CCN",
+                "Facility ID",
+                "CAH OR HOSPITAL CCN",
+                "Provider Number",
+            ],
         )
         .ok_or_else(|| anyhow::anyhow!("Hospital enrollment crosswalk file missing CCN column"))?;
-        let idx_npi = find_col_bytes(&headers, &["NPI", "Provider NPI", "npi_number"])
-            .ok_or_else(|| anyhow::anyhow!("Hospital enrollment crosswalk file missing NPI column"))?;
+        let idx_npi =
+            find_col_bytes(&headers, &["NPI", "Provider NPI", "npi_number"]).ok_or_else(|| {
+                anyhow::anyhow!("Hospital enrollment crosswalk file missing NPI column")
+            })?;
 
         let mut map = HashMap::new();
         let mut loaded = 0usize;
@@ -175,7 +192,9 @@ impl NppesCoreIndex {
     fn build(path: &str) -> anyhow::Result<Self> {
         let resolved = resolve_input_path(path);
         let file = File::open(&resolved)?;
-        let mut rdr = ReaderBuilder::new().flexible(true).from_reader(BufReader::new(file));
+        let mut rdr = ReaderBuilder::new()
+            .flexible(true)
+            .from_reader(BufReader::new(file));
         let headers = rdr.headers()?.clone();
 
         let idx_npi = find_col(&headers, &["NPI", "Provider NPI", "npi_number"])
@@ -219,9 +238,8 @@ impl NppesCoreIndex {
         )?;
 
         let tx = conn.transaction()?;
-        let mut stmt = tx.prepare(
-            "INSERT INTO nppes_core_lookup (npi, zip5, name_norm) VALUES (?1, ?2, ?3)",
-        )?;
+        let mut stmt =
+            tx.prepare("INSERT INTO nppes_core_lookup (npi, zip5, name_norm) VALUES (?1, ?2, ?3)")?;
 
         let mut inserted = 0usize;
         for row in rdr.records() {
@@ -247,7 +265,10 @@ impl NppesCoreIndex {
 
         drop(stmt);
         tx.commit()?;
-        info!("Indexed {} NPPES core rows for fuzzy Name+ZIP matching", inserted);
+        info!(
+            "Indexed {} NPPES core rows for fuzzy Name+ZIP matching",
+            inserted
+        );
 
         Ok(Self { conn })
     }
@@ -289,16 +310,32 @@ fn load_seed_rows(
     let mut rdr = ReaderBuilder::new().from_reader(BufReader::new(file));
     let headers = rdr.headers()?.clone();
 
-    let idx_ccn = find_col(&headers, &["Facility ID", "PRVDR_NUM", "Provider Number", "CCN", "ccn"])
-        .unwrap_or(0);
-    let idx_name = find_col(&headers, &["Facility Name", "FCLTY_NAME", "Hospital Name", "name"])
-        .unwrap_or(1);
-    let idx_city = find_col(&headers, &["City/Town", "CITY_NAME", "city", "City"])
-        .unwrap_or(3);
-    let idx_state = find_col(&headers, &["State", "STATE_CD", "state", "State Code"])
-        .unwrap_or(4);
-    let idx_zip = find_col(&headers, &["ZIP Code", "ZIP_CD", "Postal Code", "Zip", "zip"]);
-    let idx_website = find_col(&headers, &["Website", "Hospital Website", "Facility Website", "URL", "web_site"]);
+    let idx_ccn = find_col(
+        &headers,
+        &["Facility ID", "PRVDR_NUM", "Provider Number", "CCN", "ccn"],
+    )
+    .unwrap_or(0);
+    let idx_name = find_col(
+        &headers,
+        &["Facility Name", "FCLTY_NAME", "Hospital Name", "name"],
+    )
+    .unwrap_or(1);
+    let idx_city = find_col(&headers, &["City/Town", "CITY_NAME", "city", "City"]).unwrap_or(3);
+    let idx_state = find_col(&headers, &["State", "STATE_CD", "state", "State Code"]).unwrap_or(4);
+    let idx_zip = find_col(
+        &headers,
+        &["ZIP Code", "ZIP_CD", "Postal Code", "Zip", "zip"],
+    );
+    let idx_website = find_col(
+        &headers,
+        &[
+            "Website",
+            "Hospital Website",
+            "Facility Website",
+            "URL",
+            "web_site",
+        ],
+    );
     let idx_npi = find_col(&headers, &["NPI", "Provider NPI", "Attestation NPI", "npi"]);
 
     let mut rows = Vec::new();
@@ -353,7 +390,9 @@ fn load_seed_rows(
     Ok(rows)
 }
 
-fn load_existing_hospital_state(conn: &Connection) -> anyhow::Result<HashMap<String, (String, String, String)>> {
+fn load_existing_hospital_state(
+    conn: &Connection,
+) -> anyhow::Result<HashMap<String, (String, String, String)>> {
     let mut stmt = conn.prepare(
         "SELECT ccn, COALESCE(website, ''), COALESCE(cms_hpt_url, ''), COALESCE(mrf_url, '') FROM hospitals",
     )?;
@@ -411,10 +450,12 @@ fn website_from_endpoint(raw: &str) -> String {
 fn load_nppes_endpoint_map(path: &str) -> anyhow::Result<HashMap<String, String>> {
     let resolved = resolve_input_path(path);
     let file = File::open(&resolved)?;
-    let mut rdr = ReaderBuilder::new().flexible(true).from_reader(BufReader::new(file));
+    let mut rdr = ReaderBuilder::new()
+        .flexible(true)
+        .from_reader(BufReader::new(file));
     let headers = rdr.headers()?.clone();
 
-    let idx_npi = find_col(&headers, &["NPI", "Provider NPI", "npi_number"]) 
+    let idx_npi = find_col(&headers, &["NPI", "Provider NPI", "npi_number"])
         .ok_or_else(|| anyhow::anyhow!("NPPES endpoint file missing NPI column"))?;
     let idx_endpoint = find_col(
         &headers,
@@ -462,8 +503,11 @@ fn candidate_cms_hpt_urls(website: &str) -> Vec<String> {
 
 fn extract_candidate_urls(text: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for token in text.split(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == '<' || c == '>') {
-        let t = token.trim_matches(|c: char| c == ',' || c == ';' || c == ')' || c == '(' || c == '.');
+    for token in
+        text.split(|c: char| c.is_whitespace() || c == '"' || c == '\'' || c == '<' || c == '>')
+    {
+        let t =
+            token.trim_matches(|c: char| c == ',' || c == ';' || c == ')' || c == '(' || c == '.');
         if t.starts_with("http://") || t.starts_with("https://") {
             out.push(t.to_string());
         }
@@ -474,7 +518,13 @@ fn extract_candidate_urls(text: &str) -> Vec<String> {
 fn choose_mrf_url(text: &str, base_url: &str) -> Option<String> {
     for url in extract_candidate_urls(text) {
         let lower = url.to_ascii_lowercase();
-        if lower.contains(".json") || lower.contains(".csv") || lower.contains(".json.gz") || lower.contains(".csv.gz") || lower.contains(".txt") || lower.contains(".zip") {
+        if lower.contains(".json")
+            || lower.contains(".csv")
+            || lower.contains(".json.gz")
+            || lower.contains(".csv.gz")
+            || lower.contains(".txt")
+            || lower.contains(".zip")
+        {
             return Some(url);
         }
     }
@@ -486,7 +536,13 @@ fn choose_mrf_url(text: &str, base_url: &str) -> Option<String> {
             continue;
         }
         let lower = l.to_ascii_lowercase();
-        if lower.contains(".json") || lower.contains(".csv") || lower.contains(".json.gz") || lower.contains(".csv.gz") || lower.contains(".txt") || lower.contains(".zip") {
+        if lower.contains(".json")
+            || lower.contains(".csv")
+            || lower.contains(".json.gz")
+            || lower.contains(".csv.gz")
+            || lower.contains(".txt")
+            || lower.contains(".zip")
+        {
             if (l.starts_with('/') || !l.contains("://")) && !base_url.is_empty() {
                 if let Ok(base) = Url::parse(base_url) {
                     if let Ok(joined) = base.join(l) {
@@ -518,7 +574,11 @@ fn discover_from_homepage(client: &Client, website: &str) -> (String, String) {
     let mut landing_links = Vec::new();
     for token in body.split('"') {
         let low = token.to_ascii_lowercase();
-        if low.contains("transparency") || low.contains("standard-charges") || low.contains("machine-readable") || low.contains("price") {
+        if low.contains("transparency")
+            || low.contains("standard-charges")
+            || low.contains("machine-readable")
+            || low.contains("price")
+        {
             landing_links.push(token.trim().to_string());
         }
     }
@@ -563,7 +623,12 @@ fn discover_from_homepage(client: &Client, website: &str) -> (String, String) {
     (String::new(), String::new())
 }
 
-fn enrich_urls(client: &Client, website: &str, existing_cms_hpt: &str, existing_mrf: &str) -> (String, String) {
+fn enrich_urls(
+    client: &Client,
+    website: &str,
+    existing_cms_hpt: &str,
+    existing_mrf: &str,
+) -> (String, String) {
     if !existing_cms_hpt.is_empty() && !existing_mrf.is_empty() {
         return (existing_cms_hpt.to_string(), existing_mrf.to_string());
     }
@@ -650,7 +715,9 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
     let mut default_headers = HeaderMap::new();
     default_headers.insert(
         ACCEPT,
-        HeaderValue::from_static("text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"),
+        HeaderValue::from_static(
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+        ),
     );
     default_headers.insert(ACCEPT_LANGUAGE, HeaderValue::from_static("en-US,en;q=0.9"));
     default_headers.insert(CONNECTION, HeaderValue::from_static("keep-alive"));
@@ -677,7 +744,9 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
     } else {
         let default_crosswalk = resolve_input_path("data/master2026/hospital_enrollments_2026.csv");
         if default_crosswalk.exists() {
-            Some(CcnNpiCrosswalkIndex::build(default_crosswalk.to_string_lossy().as_ref())?)
+            Some(CcnNpiCrosswalkIndex::build(
+                default_crosswalk.to_string_lossy().as_ref(),
+            )?)
         } else {
             None
         }
@@ -694,9 +763,9 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
     };
 
     // Support comma-separated state lists (from --shard-states)
-    let state_set: Option<Vec<String>> = options.state_filter.map(|s| {
-        s.split(',').map(|st| st.trim().to_uppercase()).collect()
-    });
+    let state_set: Option<Vec<String>> = options
+        .state_filter
+        .map(|s| s.split(',').map(|st| st.trim().to_uppercase()).collect());
 
     let seed_path = resolve_input_path(&options.seed_file);
     let seed_rows = load_seed_rows(&seed_path, &state_set)?;
@@ -710,7 +779,12 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
     let discovered_rows: Vec<DiscoveryRow> = seed_rows
         .par_iter()
         .map(|row| {
-            let mut website = normalize_website(existing_hospitals.get(&row.ccn).map(|v| v.0.as_str()).unwrap_or(""));
+            let mut website = normalize_website(
+                existing_hospitals
+                    .get(&row.ccn)
+                    .map(|v| v.0.as_str())
+                    .unwrap_or(""),
+            );
             let (existing_cms_hpt, existing_mrf) = existing_hospitals
                 .get(&row.ccn)
                 .map(|v| (v.1.clone(), v.2.clone()))
@@ -750,7 +824,8 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
             }
 
             let (cms_hpt_url, mrf_url, attempted_enrichment) = if !website.is_empty() {
-                let (cms_hpt_url, mrf_url) = enrich_urls(client.as_ref(), &website, &existing_cms_hpt, &existing_mrf);
+                let (cms_hpt_url, mrf_url) =
+                    enrich_urls(client.as_ref(), &website, &existing_cms_hpt, &existing_mrf);
                 (cms_hpt_url, mrf_url, 1usize)
             } else {
                 (existing_cms_hpt, existing_mrf, 0usize)
@@ -774,11 +849,26 @@ pub fn run_discovery_with_options(options: DiscoveryOptions) -> anyhow::Result<(
         .collect();
 
     let count = discovered_rows.len();
-    let attempted_enrichment = discovered_rows.iter().map(|row| row.attempted_enrichment).sum::<usize>();
-    let found_cms_hpt = discovered_rows.iter().map(|row| row.found_cms_hpt).sum::<usize>();
-    let found_mrf = discovered_rows.iter().map(|row| row.found_mrf).sum::<usize>();
-    let endpoint_website_hits = discovered_rows.iter().map(|row| row.endpoint_website_hit).sum::<usize>();
-    let fuzzy_npi_hits = discovered_rows.iter().map(|row| row.fuzzy_npi_hit).sum::<usize>();
+    let attempted_enrichment = discovered_rows
+        .iter()
+        .map(|row| row.attempted_enrichment)
+        .sum::<usize>();
+    let found_cms_hpt = discovered_rows
+        .iter()
+        .map(|row| row.found_cms_hpt)
+        .sum::<usize>();
+    let found_mrf = discovered_rows
+        .iter()
+        .map(|row| row.found_mrf)
+        .sum::<usize>();
+    let endpoint_website_hits = discovered_rows
+        .iter()
+        .map(|row| row.endpoint_website_hit)
+        .sum::<usize>();
+    let fuzzy_npi_hits = discovered_rows
+        .iter()
+        .map(|row| row.fuzzy_npi_hit)
+        .sum::<usize>();
 
     for row in discovered_rows {
         conn.execute(

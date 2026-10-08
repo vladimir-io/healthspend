@@ -1,0 +1,52 @@
+name: Scraper CI
+
+on:
+  pull_request:
+    paths:
+      - 'scraper/**'
+      - 'scripts/ci_real_mrf_regression.sh'
+      - '.github/workflows/scraper-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scraper/**'
+      - 'scripts/ci_real_mrf_regression.sh'
+      - '.github/workflows/scraper-ci.yml'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: scraper
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            scraper/target
+          key: ${{ runner.os }}-scraper-ci-${{ hashFiles('scraper/Cargo.lock') }}
+
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        # Pre-existing dead_code noise in multi-bin crate; keep clippy advisory for now.
+        run: cargo clippy --all-targets --message-format=short
+
+      - name: Test
+        run: cargo test --all-targets -- --test-threads=1

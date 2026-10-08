@@ -1,7 +1,7 @@
-#[path = "../schema.rs"]
-mod schema;
 #[path = "../discovery.rs"]
 mod discovery;
+#[path = "../schema.rs"]
+mod schema;
 
 use clap::Parser;
 use tracing::Level;

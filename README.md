@@ -118,7 +118,7 @@ Patient UI lives at `/`. Static data access docs: `/developers.html`. Datasets a
 ### Database shards
 
 - **`audit_data.db`** — full published ledger (hospitals, compliance, all ingested prices).
-- **`audit_hot.db`** — same hospitals/compliance; `prices` filtered to 16 shortcut CPT codes for faster loads.
+- **`audit_hot.db`** — same hospitals/compliance; `prices` filtered to 20 shortcut CPT codes for faster loads.
 
 ```bash
 python3 scripts/build_hot_db.py

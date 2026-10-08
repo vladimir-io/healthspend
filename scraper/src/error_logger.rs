@@ -33,7 +33,7 @@ impl ParseError {
 /// Log a parse error to the database for tracking and alerts
 pub fn log_parse_error_to_database(error: ParseError, conn: &Connection) -> anyhow::Result<()> {
     let timestamp = Utc::now().to_rfc3339();
-    
+
     conn.execute(
         "INSERT INTO parse_errors 
          (ccn, file_path, error_type, error_detail, file_size_bytes, timestamp, resolved)
@@ -57,14 +57,11 @@ pub fn log_parse_error_to_database(error: ParseError, conn: &Connection) -> anyh
 }
 
 /// Get parse error statistics for alerting
-pub fn get_parse_error_stats(
-    conn: &Connection,
-    hours: i32,
-) -> anyhow::Result<(usize, f64)> {
+pub fn get_parse_error_stats(conn: &Connection, hours: i32) -> anyhow::Result<(usize, f64)> {
     // Count unresolved errors in the last N hours
     let mut stmt = conn.prepare(
         "SELECT COUNT(*) FROM parse_errors 
-         WHERE resolved = 0 AND timestamp > datetime('now', '-' || ?1 || ' hours')"
+         WHERE resolved = 0 AND timestamp > datetime('now', '-' || ?1 || ' hours')",
     )?;
     let error_count: usize = stmt.query_row(rusqlite::params![hours], |row| row.get(0))?;
 

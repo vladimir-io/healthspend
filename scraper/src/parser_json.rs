@@ -1,11 +1,11 @@
-use crate::shoppable::should_store_code;
-use crate::fact_writer::{FactWriter, PriceFactInput};
 use crate::error_logger::{log_parse_error_to_database, ParseError};
+use crate::fact_writer::{FactWriter, PriceFactInput};
+use crate::shoppable::should_store_code;
+use rusqlite::Connection;
 use serde::de::{self, DeserializeSeed, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde::Deserialize;
-use rusqlite::Connection;
-use std::fs::File;
 use std::fmt;
+use std::fs::File;
 use std::io::BufReader;
 use tracing::{info, warn};
 
@@ -37,11 +37,23 @@ struct StandardCharge {
     charge_type: String,
     #[serde(default, deserialize_with = "deserialize_optional_f64")]
     standard_charge_dollar: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_f64", alias = "allowed_amount_median")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_f64",
+        alias = "allowed_amount_median"
+    )]
     allowed_median: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_f64", alias = "allowed_amount_10th")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_f64",
+        alias = "allowed_amount_10th"
+    )]
     allowed_p10: Option<f64>,
-    #[serde(default, deserialize_with = "deserialize_optional_f64", alias = "allowed_amount_90th")]
+    #[serde(
+        default,
+        deserialize_with = "deserialize_optional_f64",
+        alias = "allowed_amount_90th"
+    )]
     allowed_p90: Option<f64>,
     #[serde(default)]
     payer_name: String,
@@ -126,11 +138,19 @@ impl<'a> ParseContext<'a> {
             .iter()
             .find_map(|p| {
                 let trimmed = p.npi.trim();
-                if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
             })
             .or_else(|| {
                 let trimmed = item.provider_npi.trim();
-                if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
             });
 
         for charge in item.standard_charges {
@@ -156,21 +176,24 @@ impl<'a> ParseContext<'a> {
             }
         }
 
-        self.writer.write_dual(self.conn, &PriceFactInput {
-            ccn: &self.ccn,
-            code_type: "CPT",
-            code: &code,
-            description: &item.description,
-            gross_charge: gross,
-            cash_price: cash,
-            negotiated_rate: negotiated,
-            payer: &payer,
-            plan: &plan,
-            provider_npi: provider_npi.as_deref(),
-            allowed_median,
-            allowed_p10,
-            allowed_p90,
-        });
+        self.writer.write_dual(
+            self.conn,
+            &PriceFactInput {
+                ccn: &self.ccn,
+                code_type: "CPT",
+                code: &code,
+                description: &item.description,
+                gross_charge: gross,
+                cash_price: cash,
+                negotiated_rate: negotiated,
+                payer: &payer,
+                plan: &plan,
+                provider_npi: provider_npi.as_deref(),
+                allowed_median,
+                allowed_p10,
+                allowed_p90,
+            },
+        );
 
         self.records_inserted += 1;
     }
@@ -283,10 +306,7 @@ where
             if trimmed.is_empty() {
                 Ok(None)
             } else {
-                trimmed
-                    .parse::<f64>()
-                    .map(Some)
-                    .map_err(de::Error::custom)
+                trimmed.parse::<f64>().map(Some).map_err(de::Error::custom)
             }
         }
         NumericValue::Null => Ok(None),
@@ -311,7 +331,10 @@ pub fn parse_json_streaming_with_dbs(
         Ok(c) => c,
         Err(e) => {
             warn!("Failed to open prices.db: {}", e);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -320,7 +343,10 @@ pub fn parse_json_streaming_with_dbs(
         Ok(c) => c,
         Err(e) => {
             warn!("Failed to open compliance.db for error logging: {}", e);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -336,7 +362,10 @@ pub fn parse_json_streaming_with_dbs(
                 0,
             );
             let _ = log_parse_error_to_database(error, &compliance_conn);
-            return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+            return ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            };
         }
     };
 
@@ -354,14 +383,19 @@ pub fn parse_json_streaming_with_dbs(
     match parse_result {
         Ok(found_key) => {
             if !found_key {
-                warn!("No known charge array root key found in JSON -- tried: {:?}", FALLBACK_ROOT_KEYS);
-                return ParseResult { records_inserted: 0, mrf_machine_readable: false };
+                warn!(
+                    "No known charge array root key found in JSON -- tried: {:?}",
+                    FALLBACK_ROOT_KEYS
+                );
+                return ParseResult {
+                    records_inserted: 0,
+                    mrf_machine_readable: false,
+                };
             }
 
             info!(
                 "JSON parse complete: {} inserted, {} skipped (non-shoppable)",
-                ctx.records_inserted,
-                ctx.skipped
+                ctx.records_inserted, ctx.skipped
             );
             ParseResult {
                 records_inserted: ctx.records_inserted,
@@ -369,7 +403,10 @@ pub fn parse_json_streaming_with_dbs(
             }
         }
         Err(e) => {
-            warn!("JSON parse error in {}: {} -- marking machine-unreadable", file_path, e);
+            warn!(
+                "JSON parse error in {}: {} -- marking machine-unreadable",
+                file_path, e
+            );
             let error = ParseError::new(
                 ccn.to_string(),
                 file_path.to_string(),
@@ -378,7 +415,10 @@ pub fn parse_json_streaming_with_dbs(
                 file_size,
             );
             let _ = log_parse_error_to_database(error, &compliance_conn);
-            ParseResult { records_inserted: 0, mrf_machine_readable: false }
+            ParseResult {
+                records_inserted: 0,
+                mrf_machine_readable: false,
+            }
         }
     }
 }
@@ -387,6 +427,25 @@ pub fn parse_json_streaming_with_dbs(
 mod tests {
     use super::*;
     use rusqlite::Connection;
+    use std::path::PathBuf;
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    static TEMP_SEQ: AtomicU64 = AtomicU64::new(0);
+
+    fn unique_test_dbs(label: &str) -> (PathBuf, PathBuf, PathBuf) {
+        let n = TEMP_SEQ.fetch_add(1, Ordering::Relaxed);
+        let dir = std::env::temp_dir().join(format!(
+            "healthspend-json-{}-{}-{}",
+            label,
+            std::process::id(),
+            n
+        ));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let prices = dir.join("prices.db");
+        let compliance = dir.join("compliance.db");
+        (dir, prices, compliance)
+    }
 
     fn setup_test_dbs(prices_db: &str, compliance_db: &str) {
         let prices = Connection::open(prices_db).unwrap();
@@ -420,8 +479,9 @@ mod tests {
         ).unwrap();
 
         let compliance = Connection::open(compliance_db).unwrap();
-        compliance.execute_batch(
-            "CREATE TABLE IF NOT EXISTS parse_errors (
+        compliance
+            .execute_batch(
+                "CREATE TABLE IF NOT EXISTS parse_errors (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ccn TEXT NOT NULL,
                 file_path TEXT NOT NULL,
@@ -432,20 +492,24 @@ mod tests {
                 resolved INTEGER DEFAULT 0,
                 resolution_note TEXT
             );",
-        ).unwrap();
+            )
+            .unwrap();
     }
 
     #[test]
     fn parses_contract_v3_json_fixture() {
         let root = env!("CARGO_MANIFEST_DIR");
         let json_path = format!("{}/data/contract_v3.json", root);
-        let prices_db = format!("{}/target/test-contract-v3-json-prices.db", root);
-        let compliance_db = format!("{}/target/test-contract-v3-json-compliance.db", root);
-        let _ = std::fs::remove_file(&prices_db);
-        let _ = std::fs::remove_file(&compliance_db);
-        setup_test_dbs(&prices_db, &compliance_db);
+        let (dir, prices_db, compliance_db) = unique_test_dbs("contract-v3");
+        setup_test_dbs(prices_db.to_str().unwrap(), compliance_db.to_str().unwrap());
 
-        let result = parse_json_streaming_with_dbs(&json_path, "450358", &prices_db, &compliance_db);
+        let result = parse_json_streaming_with_dbs(
+            &json_path,
+            "450358",
+            prices_db.to_str().unwrap(),
+            compliance_db.to_str().unwrap(),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
         assert!(result.mrf_machine_readable);
         assert!(result.records_inserted >= 1);
     }
@@ -454,13 +518,16 @@ mod tests {
     fn marks_malformed_json_without_known_root_unreadable() {
         let root = env!("CARGO_MANIFEST_DIR");
         let json_path = format!("{}/data/contract_v3_malformed.json", root);
-        let prices_db = format!("{}/target/test-malformed-json-prices.db", root);
-        let compliance_db = format!("{}/target/test-malformed-json-compliance.db", root);
-        let _ = std::fs::remove_file(&prices_db);
-        let _ = std::fs::remove_file(&compliance_db);
-        setup_test_dbs(&prices_db, &compliance_db);
+        let (dir, prices_db, compliance_db) = unique_test_dbs("malformed");
+        setup_test_dbs(prices_db.to_str().unwrap(), compliance_db.to_str().unwrap());
 
-        let result = parse_json_streaming_with_dbs(&json_path, "450358", &prices_db, &compliance_db);
+        let result = parse_json_streaming_with_dbs(
+            &json_path,
+            "450358",
+            prices_db.to_str().unwrap(),
+            compliance_db.to_str().unwrap(),
+        );
+        let _ = std::fs::remove_dir_all(&dir);
         assert!(!result.mrf_machine_readable);
         assert_eq!(result.records_inserted, 0);
     }

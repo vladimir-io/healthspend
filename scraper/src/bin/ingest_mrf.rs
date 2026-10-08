@@ -43,7 +43,8 @@ fn update_parse_result(
     let evidence_suffix = if mrf_machine_readable {
         format!("✓ MRF parsed: {} shoppable records found. ", records_found)
     } else {
-        "❌ MRF is machine-unreadable (malformed schema, encoding error, or unsupported format). ".to_string()
+        "❌ MRF is machine-unreadable (malformed schema, encoding error, or unsupported format). "
+            .to_string()
     };
 
     conn.execute(
@@ -136,10 +137,7 @@ fn main() -> anyhow::Result<()> {
 
     println!(
         "ingested ccn={} file={} records_inserted={} machine_readable={}",
-        args.ccn,
-        args.file,
-        records_inserted,
-        mrf_machine_readable
+        args.ccn, args.file, records_inserted, mrf_machine_readable
     );
 
     Ok(())
