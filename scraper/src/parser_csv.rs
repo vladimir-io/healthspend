@@ -216,12 +216,13 @@ pub fn parse_csv_tall_with_dbs(
         };
     }
 
-    if conn.execute_batch("BEGIN IMMEDIATE TRANSACTION;").is_err() {
-        warn!("DB transaction failed");
-        return ParseResult {
-            records_inserted: 0,
-            mrf_machine_readable: false,
-        };
+    // Valid CMS tall-format headers => machine-readable, even if every data row
+    // is filtered/skipped or a later DB write fails.
+    if let Err(e) = conn.execute_batch("BEGIN IMMEDIATE TRANSACTION;") {
+        warn!(
+            "DB transaction failed (continuing without explicit txn): {}",
+            e
+        );
     }
 
     let snapshot_date = chrono::Utc::now().format("%Y-%m-%d").to_string();
@@ -233,7 +234,10 @@ pub fn parse_csv_tall_with_dbs(
     for result in rdr.records() {
         let record = match result {
             Ok(r) => r,
-            Err(_) => continue, // Skip malformed rows
+            Err(_) => {
+                skipped += 1;
+                continue;
+            }
         };
 
         let code = idx_code
@@ -318,12 +322,12 @@ pub fn parse_csv_tall_with_dbs(
 
     let _ = conn.execute_batch("COMMIT;");
     info!(
-        "CSV parse complete: {} inserted, {} skipped (non-shoppable)",
+        "CSV parse complete: {} inserted, {} skipped (non-shoppable/malformed)",
         ct, skipped
     );
     ParseResult {
         records_inserted: ct,
-        mrf_machine_readable: ct > 0 || skipped > 0,
+        mrf_machine_readable: true,
     }
 }
 
@@ -413,12 +417,32 @@ mod tests {
             prices_db.to_str().unwrap(),
             compliance_db.to_str().unwrap(),
         );
+        let inserted = result.records_inserted;
+        let readable = result.mrf_machine_readable;
         let _ = std::fs::remove_dir_all(&dir);
         assert!(
-            result.mrf_machine_readable,
-            "expected contract_v3.csv to be machine-readable"
+            readable,
+            "expected contract_v3.csv to be machine-readable (inserted={})",
+            inserted
         );
-        assert!(result.records_inserted >= 1);
+        assert!(
+            inserted >= 1,
+            "expected at least one price row from contract_v3.csv, got {}",
+            inserted
+        );
+    }
+
+    #[test]
+    fn matches_contract_v3_csv_headers() {
+        let root = env!("CARGO_MANIFEST_DIR");
+        let csv_path = format!("{}/data/contract_v3.csv", root);
+        assert_eq!(find_header_row(&csv_path), Some(0));
+        assert_eq!(match_header("code|1"), Some("code"));
+        assert_eq!(match_header("description"), Some("desc"));
+        assert_eq!(
+            match_header("standard_charge|discounted_cash"),
+            Some("cash")
+        );
     }
 
     #[test]
