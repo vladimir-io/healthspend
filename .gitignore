@@ -119,4 +119,6 @@ web/public/audit_hot.db
 !web/public/dataset_manifest.json
 !scraper/data/test_*.json
 !scraper/data/test_*.csv
+!scraper/data/contract_v3.csv
+!scraper/data/contract_v3_malformed.csv
 

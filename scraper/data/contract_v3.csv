@@ -1,0 +1,2 @@
+code|1,description,standard_charge|gross,standard_charge|discounted_cash,standard_charge|negotiated_dollar,payer_name,plan_name,provider_npi,allowed_amount_median,allowed_amount_10th,allowed_amount_90th
+70450,Head CT (no contrast),1200,450,1100,Example Health,Gold PPO,1234567890,1000,700,1400
